@@ -56,12 +56,12 @@ SensirionBase::ErrorCodes Sts3x::init() {
     return ret;
 }
 
-SensirionBase::ErrorCodes Sts3x::singleShotMeasureAndRead(float& temperature,  
+SensirionBase::ErrorCodes Sts3x::singleShotMeasureAndRead(float& temperature,
                                                         SingleMode s_setting) {
     SensirionBase::ErrorCodes ret = SensirionBase::ErrorCodes::NO_ERROR ;
     const std::lock_guard<RecursiveMutex> lg(mutex);
 
-    if (measure(Mode::SINGLE_SHOT, s_setting) == 
+    if (measure(Mode::SINGLE_SHOT, s_setting) ==
                     SensirionBase::ErrorCodes::NO_ERROR) {
         ret = singleShotRead(temperature);
     }
@@ -72,13 +72,13 @@ SensirionBase::ErrorCodes Sts3x::singleShotMeasureAndRead(float& temperature,
     return ret;
 }
 
-SensirionBase::ErrorCodes Sts3x::measure(Mode mode, 
-                                        SingleMode s_setting, 
+SensirionBase::ErrorCodes Sts3x::measure(Mode mode,
+                                        SingleMode s_setting,
                                         PeriodicMode p_setting) {
     SensirionBase::ErrorCodes ret = ErrorCodes::NO_ERROR;
     const std::lock_guard<RecursiveMutex> lg(mutex);
 
-    _sts3x_cmd_measure = 
+    _sts3x_cmd_measure =
         (mode == Mode::SINGLE_SHOT) ? (uint16_t)s_setting : (uint16_t)p_setting;
 
     //break command to stop a previous periodic mode measure
@@ -100,7 +100,7 @@ SensirionBase::ErrorCodes Sts3x::singleShotRead(float& temperature) {
 
     SensirionBase::ErrorCodes ret =
         readWords(_address, words, SENSIRION_NUM_WORDS(words));
-    
+
     temperature = _convert_raw_temp(words[0]);
 
     return ret;
@@ -115,7 +115,7 @@ SensirionBase::ErrorCodes Sts3x::periodicDataRead(Vector<float>& data) {
     if(writeCmd(_address, STS3x_PERIODIC_READ_CMD) == ErrorCodes::NO_ERROR) {
         ret = readWords(_address, words.data(), num_of_words);
     }
-    
+
     for(int i = 0; i < num_of_words; i++) {
         if(words.at(i) != STS_DELIMITER) {
             data.append(_convert_raw_temp(words.at(i)));
@@ -194,7 +194,7 @@ int Sts3x::_get_mps_size_to_words() {
 //         break;
 //     }
 
-//     if(writeCmdWithArgs(_address, write_cmd, &limitVal, 1) == 
+//     if(writeCmdWithArgs(_address, write_cmd, &limitVal, 1) ==
 //                 ErrorCodes::ERROR_FAIL) {
 //         ret = ErrorCodes::ERROR_FAIL;
 //         Log.info("failed to set alert limit");
@@ -204,7 +204,7 @@ int Sts3x::_get_mps_size_to_words() {
 // }
 
 // SensirionBase::ErrorCodes Sts3x::getAlertThd(AlertThd thd,
-//                                             float& humidity, 
+//                                             float& humidity,
 //                                             float& temperature) {
 //     uint16_t word;
 //     uint16_t read_cmd {};
@@ -247,10 +247,10 @@ int Sts3x::_get_mps_size_to_words() {
 
 SensirionBase::ErrorCodes Sts3x::getStatus(uint16_t& status) {
     const std::lock_guard<RecursiveMutex> lg(mutex);
-    return readCmd(_address, 
-                STS3X_CMD_READ_STATUS_REG, 
-                &status, 
-                1, 
+    return readCmd(_address,
+                STS3X_CMD_READ_STATUS_REG,
+                &status,
+                1,
                 STS3X_CMD_DURATION_USEC);
 }
 
@@ -270,11 +270,11 @@ SensirionBase::ErrorCodes Sts3x::heaterOff() {
 }
 
 float Sts3x::_convert_raw_temp(uint16_t temperature_raw) {
-    return (((RAW_TEMP_ADC_COUNT * (int32_t)temperature_raw) >> 
+    return (((RAW_TEMP_ADC_COUNT * (int32_t)temperature_raw) >>
                 DIVIDE_BY_POWER) - RAW_TEMP_CONST)/SENSIRION_SCALE;
 }
 
 uint16_t Sts3x::_temperature_to_tick(int32_t temperature) {
-    return (uint16_t)((temperature * TEMP_MULTIPLY_CONSTANT + 
+    return (uint16_t)((temperature * TEMP_MULTIPLY_CONSTANT +
                 TEMP_ADD_CONSTANT) >> DIVIDE_BY_TICK);
 }

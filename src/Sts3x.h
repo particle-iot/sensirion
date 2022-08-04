@@ -69,7 +69,7 @@ public:
         LOW_NO_CLOCK_STRETCH = 0x2416,
         SINGLE_NONE = 0xFFFF,
     };
-    
+
     enum PeriodicMode : uint16_t {
         HIGH_05_MPS = 0x2032,
         MEDIUM_05_MPS = 0x2024,
@@ -96,10 +96,10 @@ public:
         STS3X_LOALRT_SET,
     };
 
-    Sts3x(TwoWire& interface, Addr address, pin_t alertPin) : 
-            SensirionBase(interface), 
+    Sts3x(TwoWire& interface, Addr address, pin_t alertPin) :
+            SensirionBase(interface),
             _address(address),
-            _alertPin(alertPin), 
+            _alertPin(alertPin),
             _sts3x_cmd_measure(SingleMode::SINGLE_NONE) {
         pinMode(_alertPin, INPUT);
     }
@@ -107,9 +107,9 @@ public:
     /**
      * @brief Initialize the STS3x interface
      *
-     * @details Attempts to begin i2c transmission of the STS3x sensor to 
+     * @details Attempts to begin i2c transmission of the STS3x sensor to
      * validate the sensor can communicate
-     * 
+     *
      * @return NO_ERROR on success, ERROR_FAIL on failure
      */
     SensirionBase::ErrorCodes init();
@@ -118,7 +118,7 @@ public:
      * @brief Measure and read from an STS sensor the temperature and humidity
      *
      * @details Write to an STS sensor the command to start a measurement, and
-     * read from the STS sensor the temperature and humidity. Calls the 
+     * read from the STS sensor the temperature and humidity. Calls the
      * measure() and read() functions internally
      *
      * @param[out] temperature measured and read in Celsius
@@ -131,16 +131,16 @@ public:
      * @brief Measure from an STS sensor
      *
      * @details Write to an STS sensor the command to start a measurement.
-     * Either sends the single shot mode, or periodic mode depending on the 
+     * Either sends the single shot mode, or periodic mode depending on the
      * mode chosen. Default is single shot.
-     * 
+     *
      * @param[in] mode measurement mode to chose from
      * @param[in] s_setting single mode setting
      * @param[in] p_setting periodic mode setting
      *
      * @return NO_ERROR on success, ERROR_FAIL on failure
      */
-    SensirionBase::ErrorCodes measure(Mode mode = Mode::SINGLE_SHOT, 
+    SensirionBase::ErrorCodes measure(Mode mode = Mode::SINGLE_SHOT,
                     SingleMode s_setting = SingleMode::HIGH_NO_CLOCK_STRETCH,
                     PeriodicMode p_setting = PeriodicMode::PERIODIC_NONE);
 
@@ -156,11 +156,11 @@ public:
     SensirionBase::ErrorCodes singleShotRead(float& temperature);
 
     /**
-     * @brief Read a started periodic mode measurement from an STS sensor. 
+     * @brief Read a started periodic mode measurement from an STS sensor.
      *
      * @details Read from an STS sensor periodic mode measurement(s) that has
      * already started. Each measurement contains a temperature value.
-     * The number of measurements read back depends on the MPS for the peridoc 
+     * The number of measurements read back depends on the MPS for the peridoc
      * mode setting chosen when the measure() function was called
      *
      * @param[out] data contains the data read.
@@ -232,12 +232,12 @@ public:
 private:
 
     /**
-     * @brief Returns the MPS word size expected in a single second for 
+     * @brief Returns the MPS word size expected in a single second for
      * reading all of the measuremnts in periodic mode
      *
      * @details Calculates the total number of words needed to read all of
      * the measurements in a single second while in periodic mode. So if you
-     * setup the SHT to read 10MPS in periodic mode that is 20 words, 4MPS is 
+     * setup the SHT to read 10MPS in periodic mode that is 20 words, 4MPS is
      * 8 words, 2MPS 4 words, etc.
      *
      * @return number of words in a single second read

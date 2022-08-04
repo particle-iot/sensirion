@@ -53,7 +53,7 @@ public:
         LOW_NO_CLOCK_STRETCH = 0x2416,
         SINGLE_NONE = 0xFFFF,
     };
-    
+
     enum PeriodicMode : uint16_t {
         HIGH_05_MPS = 0x2032,
         MEDIUM_05_MPS = 0x2024,
@@ -80,10 +80,10 @@ public:
         SHT3X_LOALRT_SET,
     };
 
-    Sht3x(TwoWire& interface, Addr address, pin_t alertPin) : 
-            SensirionBase(interface), 
+    Sht3x(TwoWire& interface, Addr address, pin_t alertPin) :
+            SensirionBase(interface),
             _address(address),
-            _alertPin(alertPin), 
+            _alertPin(alertPin),
             _sht3x_cmd_measure(SingleMode::SINGLE_NONE) {
         pinMode(_alertPin, INPUT);
     }
@@ -91,9 +91,9 @@ public:
     /**
      * @brief Initialize the SHT3x interface
      *
-     * @details Attempts to begin i2c transmission of the SHT3x sensor to 
+     * @details Attempts to begin i2c transmission of the SHT3x sensor to
      * validate the sensor can communicate
-     * 
+     *
      * @return NO_ERROR on success, ERROR_FAIL on failure
      */
     SensirionBase::ErrorCodes init();
@@ -102,7 +102,7 @@ public:
      * @brief Measure and read from an SHT sensor the temperature and humidity
      *
      * @details Write to an SHT sensor the command to start a measurement, and
-     * read from the SHT sensor the temperature and humidity. Calls the 
+     * read from the SHT sensor the temperature and humidity. Calls the
      * measure() and read() functions internally
      *
      * @param[out] temperature measured and read in Celsius
@@ -110,23 +110,23 @@ public:
      *
      * @return NO_ERROR on success, ERROR_FAIL on failure
      */
-    SensirionBase::ErrorCodes singleShotMeasureAndRead(float& temperature, 
-                    float& humidity, 
+    SensirionBase::ErrorCodes singleShotMeasureAndRead(float& temperature,
+                    float& humidity,
                     SingleMode s_setting = SingleMode::HIGH_NO_CLOCK_STRETCH);
     /**
      * @brief Measure from an SHT sensor
      *
      * @details Write to an SHT sensor the command to start a measurement.
-     * Either sends the single shot mode, or periodic mode depending on the 
+     * Either sends the single shot mode, or periodic mode depending on the
      * mode chosen. Default is single shot.
-     * 
+     *
      * @param[in] mode measurement mode to chose from
      * @param[in] s_setting single mode setting
      * @param[in] p_setting periodic mode setting
      *
      * @return NO_ERROR on success, ERROR_FAIL on failure
      */
-    SensirionBase::ErrorCodes measure(Mode mode = Mode::SINGLE_SHOT, 
+    SensirionBase::ErrorCodes measure(Mode mode = Mode::SINGLE_SHOT,
                     SingleMode s_setting = SingleMode::HIGH_NO_CLOCK_STRETCH,
                     PeriodicMode p_setting = PeriodicMode::PERIODIC_NONE);
 
@@ -140,15 +140,15 @@ public:
      *
      * @return NO_ERROR on success, ERROR_FAIL on failure
      */
-    SensirionBase::ErrorCodes singleShotRead(float& temperature, 
+    SensirionBase::ErrorCodes singleShotRead(float& temperature,
                                             float& humidity);
 
     /**
-     * @brief Read a started periodic mode measurement from an SHT sensor. 
+     * @brief Read a started periodic mode measurement from an SHT sensor.
      *
      * @details Read from an SHT sensor periodic mode measurement(s) that has
      * already started. Each measurement contains a temperature and humidty.
-     * The number of measurements read back depends on the MPS for the peridoc 
+     * The number of measurements read back depends on the MPS for the peridoc
      * mode setting chosen when the measure() function was called. Must call the
      * measure() function before calling this function.
      *
@@ -167,8 +167,8 @@ public:
      *
      * @return <what does the function return (optional if void)>
      */
-    SensirionBase::ErrorCodes setAlertThd(AlertThd thd, 
-                                        float humidity, 
+    SensirionBase::ErrorCodes setAlertThd(AlertThd thd,
+                                        float humidity,
                                         float temperature);
 
     /**
@@ -181,7 +181,7 @@ public:
      * @return NO_ERROR on success, ERROR_FAIL on failure
      */
     SensirionBase::ErrorCodes getAlertThd(AlertThd thd,
-                                        float& humidity, 
+                                        float& humidity,
                                         float& temperature);
 
     /**
@@ -225,12 +225,12 @@ public:
 private:
 
     /**
-     * @brief Returns the MPS word size expected in a single second for 
+     * @brief Returns the MPS word size expected in a single second for
      * reading all of the measuremnts in periodic mode
      *
      * @details Calculates the total number of words needed to read all of
      * the measurements in a single second while in periodic mode. So if you
-     * setup the SHT to read 10MPS in periodic mode that is 20 words, 4MPS is 
+     * setup the SHT to read 10MPS in periodic mode that is 20 words, 4MPS is
      * 8 words, 2MPS 4 words, etc.
      *
      * @return number of words in a single second read

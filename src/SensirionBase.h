@@ -43,8 +43,8 @@ public:
      *
      * @return NO_ERROR on success, ERROR_FAIL on failure
      */
-    SensirionBase::ErrorCodes readCmd(uint8_t address, 
-                                    uint16_t command, 
+    SensirionBase::ErrorCodes readCmd(uint8_t address,
+                                    uint16_t command,
                                     uint16_t* data_words,
                                     uint16_t num_words,
                                     uint32_t delay_us = 0);
@@ -75,7 +75,7 @@ public:
      *
      * @return <what does the function return (optional if void)>
      */
-    SensirionBase::ErrorCodes writeCmdWithArgs(uint8_t address, 
+    SensirionBase::ErrorCodes writeCmdWithArgs(uint8_t address,
                                             uint16_t command,
                                             const uint16_t* data_words,
                                             uint16_t num_words);
@@ -90,7 +90,7 @@ protected:
      *
      * @param[in] address of sensirion device to read
      * @param[out] buf buffer to store read bytes into
-     * @param[in] length number of bytes to read 
+     * @param[in] length number of bytes to read
      *
      * @return number of bytes read
      */
@@ -105,7 +105,7 @@ protected:
      * @param[in] address of sensirion device to write
      * @param[in] buf buffer containing payload to write
      * @param[in] length number of bytes to write
-     * 
+     *
      * @return number of bytes written
      */
     size_t writeRegister(uint8_t address, const uint8_t* buf, size_t length);
@@ -124,8 +124,8 @@ protected:
      * @brief Read words from a sensirion device
      *
      * @details Used to read a single word, or multiple words from a sensirion
-     * device. Will read out single bytes (calls readWordsAsBytes() function) 
-     * from the sensirion device, and then concatenate those bytes to get a 
+     * device. Will read out single bytes (calls readWordsAsBytes() function)
+     * from the sensirion device, and then concatenate those bytes to get a
      * full word from a device.
      *
      * @param[in] address of sensirion device to read
@@ -134,7 +134,7 @@ protected:
      *
      * @return NO_ERROR on success, ERROR_FAIL on failure
      */
-    SensirionBase::ErrorCodes readWords(uint8_t address, 
+    SensirionBase::ErrorCodes readWords(uint8_t address,
                                     uint16_t* data_words,
                                     uint16_t num_words);
 
@@ -155,7 +155,7 @@ private:
      *
      * @return NO_ERROR on success, ERROR_FAIL on failure
      */
-    SensirionBase::ErrorCodes readWordsAsBytes(uint8_t address, 
+    SensirionBase::ErrorCodes readWordsAsBytes(uint8_t address,
                                             uint8_t* data,
                                             uint16_t num_words);
 
@@ -196,7 +196,7 @@ private:
      * @param[in] data buffer of data to calculate CRC
      * @param[in] len length of buffer
      * @param[in] checksum to compare against the calculated CRC
-     * 
+     *
      *
      * @return TRUE if match, FALSE if no match
      */

@@ -72,13 +72,13 @@ SensirionBase::ErrorCodes Sht3x::init() {
     return ret;
 }
 
-SensirionBase::ErrorCodes Sht3x::singleShotMeasureAndRead(float& temperature, 
-                                                        float& humidity, 
+SensirionBase::ErrorCodes Sht3x::singleShotMeasureAndRead(float& temperature,
+                                                        float& humidity,
                                                         SingleMode s_setting) {
     SensirionBase::ErrorCodes ret = SensirionBase::ErrorCodes::NO_ERROR ;
     const std::lock_guard<RecursiveMutex> lg(mutex);
 
-    if (measure(Mode::SINGLE_SHOT, s_setting) == 
+    if (measure(Mode::SINGLE_SHOT, s_setting) ==
                     SensirionBase::ErrorCodes::NO_ERROR) {
         ret = singleShotRead(temperature, humidity);
     }
@@ -89,13 +89,13 @@ SensirionBase::ErrorCodes Sht3x::singleShotMeasureAndRead(float& temperature,
     return ret;
 }
 
-SensirionBase::ErrorCodes Sht3x::measure(Mode mode, 
-                                        SingleMode s_setting, 
+SensirionBase::ErrorCodes Sht3x::measure(Mode mode,
+                                        SingleMode s_setting,
                                         PeriodicMode p_setting) {
     SensirionBase::ErrorCodes ret = ErrorCodes::NO_ERROR;
     const std::lock_guard<RecursiveMutex> lg(mutex);
 
-    _sht3x_cmd_measure = 
+    _sht3x_cmd_measure =
         (mode == Mode::SINGLE_SHOT) ? (uint16_t)s_setting : (uint16_t)p_setting;
 
     //break command to stop a previous periodic mode measure
@@ -111,14 +111,14 @@ SensirionBase::ErrorCodes Sht3x::measure(Mode mode,
     return ret;
 }
 
-SensirionBase::ErrorCodes Sht3x::singleShotRead(float& temperature, 
+SensirionBase::ErrorCodes Sht3x::singleShotRead(float& temperature,
                                             float& humidity) {
     uint16_t words[2] {};
     const std::lock_guard<RecursiveMutex> lg(mutex);
 
     SensirionBase::ErrorCodes ret =
         readWords(_address, words, SENSIRION_NUM_WORDS(words));
-    
+
     temperature = _convert_raw_temp(words[0]);
     humidity = _convert_raw_humidity(words[1]);
 
@@ -135,7 +135,7 @@ SensirionBase::ErrorCodes Sht3x::periodicDataRead(Vector<float>& data) {
     if(writeCmd(_address, STS3x_PERIODIC_READ_CMD) == ErrorCodes::NO_ERROR) {
         ret = readWords(_address, words.data(), num_of_words);
     }
-    
+
     for(int i = 0; i < num_of_words; i+=2) {
         data.append(_convert_raw_temp(words.at(i)));
         data.append(_convert_raw_humidity(words.at(i+1)));
@@ -183,8 +183,8 @@ int Sht3x::_get_mps_size_to_words() {
     return size;
 }
 
-SensirionBase::ErrorCodes Sht3x::setAlertThd(AlertThd thd, 
-                                            float humidity, 
+SensirionBase::ErrorCodes Sht3x::setAlertThd(AlertThd thd,
+                                            float humidity,
                                             float temperature) {
     uint16_t limitVal = 0U;
     uint16_t write_cmd {};
@@ -216,7 +216,7 @@ SensirionBase::ErrorCodes Sht3x::setAlertThd(AlertThd thd,
         break;
     }
 
-    if(writeCmdWithArgs(_address, write_cmd, &limitVal, 1) == 
+    if(writeCmdWithArgs(_address, write_cmd, &limitVal, 1) ==
                 ErrorCodes::ERROR_FAIL) {
         ret = ErrorCodes::ERROR_FAIL;
         Log.info("failed to set alert limit");
@@ -226,7 +226,7 @@ SensirionBase::ErrorCodes Sht3x::setAlertThd(AlertThd thd,
 }
 
 SensirionBase::ErrorCodes Sht3x::getAlertThd(AlertThd thd,
-                                            float& humidity, 
+                                            float& humidity,
                                             float& temperature) {
     uint16_t word;
     uint16_t read_cmd {};
@@ -269,10 +269,10 @@ SensirionBase::ErrorCodes Sht3x::getAlertThd(AlertThd thd,
 
 SensirionBase::ErrorCodes Sht3x::getStatus(uint16_t& status) {
     const std::lock_guard<RecursiveMutex> lg(mutex);
-    return readCmd(_address, 
-                SHT3X_CMD_READ_STATUS_REG, 
-                &status, 
-                1, 
+    return readCmd(_address,
+                SHT3X_CMD_READ_STATUS_REG,
+                &status,
+                1,
                 SHT3X_CMD_DURATION_USEC);
 }
 
@@ -292,17 +292,17 @@ SensirionBase::ErrorCodes Sht3x::heaterOff() {
 }
 
 float Sht3x::_convert_raw_temp(uint16_t temperature_raw) {
-    return (((RAW_TEMP_ADC_COUNT * (int32_t)temperature_raw) >> 
+    return (((RAW_TEMP_ADC_COUNT * (int32_t)temperature_raw) >>
                 DIVIDE_BY_POWER) - RAW_TEMP_CONST)/SENSIRION_SCALE;
 }
 
 float Sht3x::_convert_raw_humidity(uint16_t humidity_raw) {
-    return ((RAW_HUMIDITY_ADC_COUNT * (int32_t)humidity_raw) >> 
+    return ((RAW_HUMIDITY_ADC_COUNT * (int32_t)humidity_raw) >>
             DIVIDE_BY_POWER)/SENSIRION_SCALE;
 }
 
 uint16_t Sht3x::_temperature_to_tick(int32_t temperature) {
-    return (uint16_t)((temperature * TEMP_MULTIPLY_CONSTANT + 
+    return (uint16_t)((temperature * TEMP_MULTIPLY_CONSTANT +
             TEMP_ADD_CONSTANT) >> DIVIDE_BY_TICK);
 }
 
