@@ -43,14 +43,13 @@ constexpr uint16_t SHT3X_CMD_DURATION_USEC = 1000;
 constexpr uint16_t SHT3X_HUMIDITY_LIMIT_MSK = 0xFE00U;
 constexpr uint16_t SHT3X_TEMPERATURE_LIMIT_MSK = 0x01FFU;
 
-constexpr unsigned int RAW_TEMP_ADC_COUNT = 21875;
-constexpr unsigned int RAW_HUMIDITY_ADC_COUNT = 12500;
-constexpr unsigned int DIVIDE_BY_POWER = 13;
+constexpr float RAW_HUMIDITY_SCALE = 100.0f / 65535.0f; // Per datasheet
+constexpr float RAW_TEMP_SCALE = 175.0f / 65535.0f; // Per datasheet
+constexpr float RAW_TEMP_OFFSET = -45.0f; // Per datasheet
 constexpr int DIVIDE_BY_TICK = 15;
 constexpr int TEMP_ADD_CONSTANT = 552195000;
 constexpr int TEMP_MULTIPLY_CONSTANT = 12271;
 constexpr int HUMID_MULT_CONSTANT = 21474;
-constexpr unsigned int RAW_TEMP_CONST = 45000;
 constexpr float SENSIRION_SCALE = 1000.0F;
 
 constexpr int ONE_WORD_SIZE = 1;
@@ -292,13 +291,11 @@ SensirionBase::ErrorCodes Sht3x::heaterOff() {
 }
 
 float Sht3x::_convert_raw_temp(uint16_t temperature_raw) {
-    return (((RAW_TEMP_ADC_COUNT * (int32_t)temperature_raw) >>
-                DIVIDE_BY_POWER) - RAW_TEMP_CONST)/SENSIRION_SCALE;
+    return (RAW_TEMP_SCALE * (float)temperature_raw) + RAW_TEMP_OFFSET;
 }
 
 float Sht3x::_convert_raw_humidity(uint16_t humidity_raw) {
-    return ((RAW_HUMIDITY_ADC_COUNT * (int32_t)humidity_raw) >>
-            DIVIDE_BY_POWER)/SENSIRION_SCALE;
+    return (RAW_HUMIDITY_SCALE * (float)humidity_raw);
 }
 
 uint16_t Sht3x::_temperature_to_tick(int32_t temperature) {
