@@ -178,7 +178,7 @@ int Sht3x::_get_mps_size_to_words() {
     return size;
 }
 
-bool Sht3x::setAlertThd(AlertThd thd,
+bool Sht3x::setAlertThreshold(AlertThreshold limit,
                                             float humidity,
                                             float temperature) {
     uint16_t limitVal = 0U;
@@ -193,20 +193,20 @@ bool Sht3x::setAlertThd(AlertThd thd,
     limitVal = (rawRH & SHT3X_HUMIDITY_LIMIT_MSK);
     limitVal |= ((rawT >> 7) & SHT3X_TEMPERATURE_LIMIT_MSK);
 
-    switch (thd) {
-        case AlertThd::SHT3X_HIALRT_SET:
+    switch (limit) {
+        case AlertThreshold::SHT3X_HIALRT_SET:
             write_cmd = WRITE_HIALRT_LIM_SET;
         break;
 
-        case AlertThd::SHT3X_HIALRT_CLR:
+        case AlertThreshold::SHT3X_HIALRT_CLR:
             write_cmd = WRITE_HIALRT_LIM_CLR;
         break;
 
-        case AlertThd::SHT3X_LOALRT_CLR:
+        case AlertThreshold::SHT3X_LOALRT_CLR:
             write_cmd = WRITE_LOALRT_LIM_CLR;
         break;
 
-        case AlertThd::SHT3X_LOALRT_SET:
+        case AlertThreshold::SHT3X_LOALRT_SET:
             write_cmd = WRITE_LOALRT_LIM_SET;
         break;
     }
@@ -219,7 +219,7 @@ bool Sht3x::setAlertThd(AlertThd thd,
     return ret;
 }
 
-bool Sht3x::getAlertThd(AlertThd thd,
+bool Sht3x::getAlertThreshold(AlertThreshold limit,
                                             float& humidity,
                                             float& temperature) {
     uint16_t word;
@@ -227,20 +227,20 @@ bool Sht3x::getAlertThd(AlertThd thd,
     bool ret = true;
     const std::lock_guard<RecursiveMutex> lg(mutex);
 
-    switch (thd) {
-        case AlertThd::SHT3X_HIALRT_SET:
+    switch (limit) {
+        case AlertThreshold::SHT3X_HIALRT_SET:
             read_cmd = READ_HIALRT_LIM_SET;
         break;
 
-        case AlertThd::SHT3X_HIALRT_CLR:
+        case AlertThreshold::SHT3X_HIALRT_CLR:
             read_cmd = READ_HIALRT_LIM_CLR;
         break;
 
-        case AlertThd::SHT3X_LOALRT_CLR:
+        case AlertThreshold::SHT3X_LOALRT_CLR:
             read_cmd = READ_LOALRT_LIM_CLR;
         break;
 
-        case AlertThd::SHT3X_LOALRT_SET:
+        case AlertThreshold::SHT3X_LOALRT_SET:
             read_cmd = READ_LOALRT_LIM_SET;
         break;
     }

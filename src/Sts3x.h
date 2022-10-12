@@ -87,7 +87,7 @@ public:
         PERIODIC_NONE = 0xFFFF,
     };
 
-    enum class AlertThd {
+    enum class AlertThreshold {
         STS3X_HIALRT_SET,
         STS3X_HIALRT_CLR,
         STS3X_LOALRT_CLR,
@@ -167,27 +167,28 @@ public:
      */
     bool periodicDataRead(Vector<float>& data);
 
-    // /**
-    //  * @brief <enter a brief one sentence description>
-    //  *
-    //  * @details <details of the function>
-    //  *
-    //  * @param[in,out] <name of variable> <description of variable>
-    //  *
-    //  * @return <what does the function return (optional if void)>
-    //  */
-    // bool setAlertThd(AlertThd thd);
+    /**
+     * @brief <enter a brief one sentence description>
+     *
+     * @details <details of the function>
+     *
+     * @param[in,out] <name of variable> <description of variable>
+     *
+     * @return true on success, false on failure
+     */
+    bool setAlertThreshold(AlertThreshold limit, float temperature);
 
-    // /**
-    //  * @brief <enter a brief one sentence description>
-    //  *
-    //  * @details <details of the function>
-    //  *
-    //  * @param[in,out] <name of variable> <description of variable>
-    //  *
-    //  * @return <what does the function return (optional if void)>
-    //  */
-    // bool getAlertThd(AlertThd thd);
+    /**
+     * @brief Get tresholds for alert mode
+     *
+     * @details Read limits for the alert mode
+     *
+     * @param[in] limit the limit to read
+     * @param[out] temperature temperature threshold value
+     *
+     * @return true on success, false on failure
+     */
+    bool getAlertThreshold(AlertThreshold limit, float& temperature) ;
 
     /**
      * @brief Read the STS status register

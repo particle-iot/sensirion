@@ -24,11 +24,9 @@ constexpr uint16_t STS3X_CMD_HEATER_ON = 0x306D;
 constexpr uint16_t STS3X_CMD_HEATER_OFF = 0x3066;
 
 constexpr uint16_t STS3X_CMD_DURATION_USEC = 1000;
-constexpr uint16_t STS3X_HUMIDITY_LIMIT_MSK = 0xFE00U;
 constexpr uint16_t STS3X_TEMPERATURE_LIMIT_MSK = 0x01FFU;
 
 constexpr unsigned int RAW_TEMP_ADC_COUNT = 21875;
-constexpr unsigned int RAW_HUMIDITY_ADC_COUNT = 12500;
 constexpr unsigned int DIVIDE_BY_POWER = 13;
 constexpr unsigned int RAW_TEMP_CONST = 45000;
 constexpr int DIVIDE_BY_TICK = 15;
@@ -159,85 +157,79 @@ int Sts3x::_get_mps_size_to_words() {
     return size;
 }
 
-// bool Sts3x::setAlertThd(AlertThd thd, float temperature) {
-//     uint16_t limitVal = 0U;
-//     uint16_t write_cmd {};
-//     bool ret = true;
+bool Sts3x::setAlertThreshold(AlertThreshold limit, float temperature) {
+    uint16_t limitVal = 0U;
+    uint16_t write_cmd {};
+    bool ret = true;
 
-//     uint16_t rawT = _temperature_to_tick(temperature * SENSIRION_SCALE);
-//     uint16_t rawRH = _humidity_to_tick(humidity * SENSIRION_SCALE);
+    uint16_t rawT = _temperature_to_tick(temperature * SENSIRION_SCALE);
 
-//     /* convert inputs to alert threshold word */
-//     limitVal = (rawRH & SHT3X_HUMIDITY_LIMIT_MSK);
-//     limitVal |= ((rawT >> 7) & SHT3X_TEMPERATURE_LIMIT_MSK);
+    /* convert inputs to alert threshold word */
+    limitVal = ((rawT >> 7) & STS3X_TEMPERATURE_LIMIT_MSK);
 
-//     switch (thd) {
-//         case AlertThd::STS3X_HIALRT_SET:
-//             write_cmd = WRITE_HIALRT_LIM_SET;
-//         break;
+    switch (limit) {
+        case AlertThreshold::STS3X_HIALRT_SET:
+            write_cmd = WRITE_HIALRT_LIM_SET;
+        break;
 
-//         case AlertThd::STS3X_HIALRT_CLR:
-//             write_cmd = WRITE_HIALRT_LIM_CLR;
-//         break;
+        case AlertThreshold::STS3X_HIALRT_CLR:
+            write_cmd = WRITE_HIALRT_LIM_CLR;
+        break;
 
-//         case AlertThd::STS3X_LOALRT_CLR:
-//             write_cmd = WRITE_LOALRT_LIM_CLR;
-//         break;
+        case AlertThreshold::STS3X_LOALRT_CLR:
+            write_cmd = WRITE_LOALRT_LIM_CLR;
+        break;
 
-//         case AlertThd::STS3X_LOALRT_SET:
-//             write_cmd = WRITE_LOALRT_LIM_SET;
-//         break;
-//     }
+        case AlertThreshold::STS3X_LOALRT_SET:
+            write_cmd = WRITE_LOALRT_LIM_SET;
+        break;
+    }
 
-//     if(!writeCmdWithArgs(write_cmd, &limitVal, 1)) {
-//         ret = false;
-//         Log.info("failed to set alert limit");
-//     }
+    if(!writeCmdWithArgs(write_cmd, &limitVal, 1)) {
+        ret = false;
+        Log.info("failed to set alert limit");
+    }
 
-//     return ret;
-// }
+    return ret;
+}
 
-// bool Sts3x::getAlertThd(AlertThd thd,
-//                                             float& humidity,
-//                                             float& temperature) {
-//     uint16_t word;
-//     uint16_t read_cmd {};
+bool Sts3x::getAlertThreshold(AlertThreshold limit,
+                                            float& temperature) {
+    uint16_t word;
+    uint16_t read_cmd {};
 
-//     bool ret = true;
+    bool ret = true;
 
-//     switch (thd) {
-//         case AlertThd::STS3X_HIALRT_SET:
-//             read_cmd = READ_HIALRT_LIM_SET;
-//         break;
+    switch (limit) {
+        case AlertThreshold::STS3X_HIALRT_SET:
+            read_cmd = READ_HIALRT_LIM_SET;
+        break;
 
-//         case AlertThd::STS3X_HIALRT_CLR:
-//             read_cmd = READ_HIALRT_LIM_CLR;
-//         break;
+        case AlertThreshold::STS3X_HIALRT_CLR:
+            read_cmd = READ_HIALRT_LIM_CLR;
+        break;
 
-//         case AlertThd::STS3X_LOALRT_CLR:
-//             read_cmd = READ_LOALRT_LIM_CLR;
-//         break;
+        case AlertThreshold::STS3X_LOALRT_CLR:
+            read_cmd = READ_LOALRT_LIM_CLR;
+        break;
 
-//         case AlertThd::STS3X_LOALRT_SET:
-//             read_cmd = READ_LOALRT_LIM_SET;
-//         break;
-//     }
+        case AlertThreshold::STS3X_LOALRT_SET:
+            read_cmd = READ_LOALRT_LIM_SET;
+        break;
+    }
 
-//     if(writeCmdWithArgs(read_cmd, &word, 1)) {
-//         /* convert threshold word to alert settings in 10*%RH & 10*°C */
-//         uint16_t rawRH = (word & STS3X_HUMIDITY_LIMIT_MSK);
-//         uint16_t rawT = ((word & STS3X_TEMPERATURE_LIMIT_MSK) << 7);
+    if(writeCmdWithArgs(read_cmd, &word, 1)) {
+        /* convert threshold word to alert settings in 10*%RH & 10*°C */
+        uint16_t rawT = ((word & STS3X_TEMPERATURE_LIMIT_MSK) << 7);
+        temperature = _convert_raw_temp(rawT);
+    }
+    else {
+        ret = false;
+        Log.info("failed to get alert limit");
+    }
 
-//         humidity = _convert_raw_humidity(rawRH);
-//         temperature = _convert_raw_temp(rawT);
-//     }
-//     else {
-//         ret = false;
-//         Log.info("failed to get alert limit");
-//     }
-
-//     return ret;
-// }
+    return ret;
+}
 
 bool Sts3x::getStatus(uint16_t& status) {
     const std::lock_guard<RecursiveMutex> lg(mutex);

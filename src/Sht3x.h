@@ -71,7 +71,7 @@ public:
         PERIODIC_NONE = 0xFFFF,
     };
 
-    enum class AlertThd {
+    enum class AlertThreshold {
         SHT3X_HIALRT_SET,
         SHT3X_HIALRT_CLR,
         SHT3X_LOALRT_CLR,
@@ -157,28 +157,32 @@ public:
     bool periodicDataRead(Vector<float>& data);
 
     /**
-     * @brief <enter a brief one sentence description>
+     * @brief Set thresholds for alert mode
      *
      * @details <details of the function>
      *
-     * @param[in,out] <name of variable> <description of variable>
+     * @param[in] limit the limit to set
+     * @param[in] humidity humidity threshold value
+     * @param[in] temperature temperature threshold value
      *
-     * @return <what does the function return (optional if void)>
+     * @return true on success, false on failure
      */
-    bool setAlertThd(AlertThd thd,
+    bool setAlertThreshold(AlertThreshold limit,
                                         float humidity,
                                         float temperature);
 
     /**
-     * @brief <enter a brief one sentence description>
+     * @brief Get tresholds for alert mode
      *
-     * @details <details of the function>
+     * @details Read limits for the alert mode
      *
-     * @param[in,out] <name of variable> <description of variable>
+     * @param[in] limit the limit to read
+     * @param[out] humidity humidity threshold value
+     * @param[out] temperature temperature threshold value
      *
      * @return true on success, false on failure
      */
-    bool getAlertThd(AlertThd thd,
+    bool getAlertThreshold(AlertThreshold limit,
                                         float& humidity,
                                         float& temperature);
 
