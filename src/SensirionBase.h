@@ -27,7 +27,17 @@ public:
         ERROR_FAIL,
     };
 
-    SensirionBase(TwoWire& i2c) : _i2c(i2c) {};
+    SensirionBase(TwoWire& i2c, uint8_t address) : _i2c(i2c), _address(address) {};
+
+    /**
+     * @brief Initialize the interface
+     *
+     * @details Attempts to begin i2c transmission of the sensor to
+     * validate the sensor can communicate
+     *
+     * @return NO_ERROR on success, ERROR_FAIL on failure
+     */
+    SensirionBase::ErrorCodes init();
 
     /**
      * @brief Used to read a sensirion sensor
@@ -43,8 +53,7 @@ public:
      *
      * @return NO_ERROR on success, ERROR_FAIL on failure
      */
-    SensirionBase::ErrorCodes readCmd(uint8_t address,
-                                    uint16_t command,
+    SensirionBase::ErrorCodes readCmd(uint16_t command,
                                     uint16_t* data_words,
                                     uint16_t num_words,
                                     uint32_t delay_us = 0);
@@ -59,7 +68,7 @@ public:
      *
      * @return NO_ERROR on success, ERROR_FAIL on failure
      */
-    SensirionBase::ErrorCodes writeCmd(uint8_t address, uint16_t command);
+    SensirionBase::ErrorCodes writeCmd(uint16_t command);
 
     /**
      * @brief Used to write a command with multiple arguments to a sensirion
@@ -75,8 +84,7 @@ public:
      *
      * @return <what does the function return (optional if void)>
      */
-    SensirionBase::ErrorCodes writeCmdWithArgs(uint8_t address,
-                                            uint16_t command,
+    SensirionBase::ErrorCodes writeCmdWithArgs(uint16_t command,
                                             const uint16_t* data_words,
                                             uint16_t num_words);
 
@@ -94,7 +102,7 @@ protected:
      *
      * @return number of bytes read
      */
-    size_t readRegister(uint8_t address, uint8_t* buf, size_t length);
+    size_t readRegister(uint8_t* buf, size_t length);
 
     /**
      * @brief Write a register of a sensirion device
@@ -108,7 +116,7 @@ protected:
      *
      * @return number of bytes written
      */
-    size_t writeRegister(uint8_t address, const uint8_t* buf, size_t length);
+    size_t writeRegister(const uint8_t* buf, size_t length);
 
     /**
      * @brief Read words from a sensirion device
@@ -124,11 +132,11 @@ protected:
      *
      * @return NO_ERROR on success, ERROR_FAIL on failure
      */
-    SensirionBase::ErrorCodes readWords(uint8_t address,
-                                    uint16_t* data_words,
+    SensirionBase::ErrorCodes readWords(uint16_t* data_words,
                                     uint16_t num_words);
 
     TwoWire& _i2c;
+    uint8_t _address;
     static Logger driver_log;
 private:
     /**
@@ -146,8 +154,7 @@ private:
      *
      * @return NO_ERROR on success, ERROR_FAIL on failure
      */
-    SensirionBase::ErrorCodes readWordsAsBytes(uint8_t address,
-                                            uint8_t* data,
+    SensirionBase::ErrorCodes readWordsAsBytes(uint8_t* data,
                                             uint16_t num_words);
 
     /**

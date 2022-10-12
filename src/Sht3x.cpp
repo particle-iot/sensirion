@@ -59,19 +59,6 @@ constexpr int FOUR_WORD_SIZE = 4;
 constexpr int EIGHT_WORD_SIZE = 8;
 constexpr int TEN_WORD_SIZE = 10;
 
-SensirionBase::ErrorCodes Sht3x::init() {
-    SensirionBase::ErrorCodes ret = SensirionBase::ErrorCodes::NO_ERROR;
-    const std::lock_guard<RecursiveMutex> lg(mutex);
-
-    _i2c.begin();
-    _i2c.beginTransmission(_address);
-    if (_i2c.endTransmission() != 0) {
-        driver_log.error("SHT-3x address invalid or device failed");
-        ret = SensirionBase::ErrorCodes::ERROR_FAIL;
-    }
-    return ret;
-}
-
 SensirionBase::ErrorCodes Sht3x::singleShotMeasureAndRead(float& temperature,
                                                         float& humidity,
                                                         SingleMode s_setting) {
@@ -99,13 +86,13 @@ SensirionBase::ErrorCodes Sht3x::measure(Mode mode,
         (mode == Mode::SINGLE_SHOT) ? (uint16_t)s_setting : (uint16_t)p_setting;
 
     //break command to stop a previous periodic mode measure
-    ret = writeCmd(_address, SHT3X_BREAK_CMD);
+    ret = writeCmd(SHT3X_BREAK_CMD);
     delay(1);//must delay 1ms to allow SHT3X to stop periodic data
 
     //do a check here if it happens to fail
     //the break command when in periodic mode
     if(ret == ErrorCodes::NO_ERROR) {
-        ret = writeCmd(_address, _sht3x_cmd_measure);
+        ret = writeCmd(_sht3x_cmd_measure);
     }
 
     return ret;
@@ -117,7 +104,7 @@ SensirionBase::ErrorCodes Sht3x::singleShotRead(float& temperature,
     const std::lock_guard<RecursiveMutex> lg(mutex);
 
     SensirionBase::ErrorCodes ret =
-        readWords(_address, words, SENSIRION_NUM_WORDS(words));
+        readWords(words, SENSIRION_NUM_WORDS(words));
 
     temperature = _convert_raw_temp(words[0]);
     humidity = _convert_raw_humidity(words[1]);
@@ -132,8 +119,8 @@ SensirionBase::ErrorCodes Sht3x::periodicDataRead(Vector<float>& data) {
     Vector<uint16_t> words(num_of_words);
     SensirionBase::ErrorCodes ret = ErrorCodes::ERROR_FAIL;
 
-    if(writeCmd(_address, STS3x_PERIODIC_READ_CMD) == ErrorCodes::NO_ERROR) {
-        ret = readWords(_address, words.data(), num_of_words);
+    if(writeCmd(STS3x_PERIODIC_READ_CMD) == ErrorCodes::NO_ERROR) {
+        ret = readWords(words.data(), num_of_words);
     }
 
     for(int i = 0; i < num_of_words; i+=2) {
@@ -216,7 +203,7 @@ SensirionBase::ErrorCodes Sht3x::setAlertThd(AlertThd thd,
         break;
     }
 
-    if(writeCmdWithArgs(_address, write_cmd, &limitVal, 1) ==
+    if(writeCmdWithArgs(write_cmd, &limitVal, 1) ==
                 ErrorCodes::ERROR_FAIL) {
         ret = ErrorCodes::ERROR_FAIL;
         driver_log.info("failed to set alert limit");
@@ -251,7 +238,7 @@ SensirionBase::ErrorCodes Sht3x::getAlertThd(AlertThd thd,
         break;
     }
 
-    if(writeCmdWithArgs(_address, read_cmd, &word, 1) != ErrorCodes::ERROR_FAIL) {
+    if(writeCmdWithArgs(read_cmd, &word, 1) != ErrorCodes::ERROR_FAIL) {
         /* convert threshold word to alert settings in 10*%RH & 10*°C */
         uint16_t rawRH = (word & SHT3X_HUMIDITY_LIMIT_MSK);
         uint16_t rawT = ((word & SHT3X_TEMPERATURE_LIMIT_MSK) << 7);
@@ -269,8 +256,7 @@ SensirionBase::ErrorCodes Sht3x::getAlertThd(AlertThd thd,
 
 SensirionBase::ErrorCodes Sht3x::getStatus(uint16_t& status) {
     const std::lock_guard<RecursiveMutex> lg(mutex);
-    return readCmd(_address,
-                SHT3X_CMD_READ_STATUS_REG,
+    return readCmd(SHT3X_CMD_READ_STATUS_REG,
                 &status,
                 1,
                 SHT3X_CMD_DURATION_USEC);
@@ -278,17 +264,17 @@ SensirionBase::ErrorCodes Sht3x::getStatus(uint16_t& status) {
 
 SensirionBase::ErrorCodes Sht3x::clearStatus() {
     const std::lock_guard<RecursiveMutex> lg(mutex);
-    return writeCmd(_address, SHT3X_CMD_CLR_STATUS_REG);
+    return writeCmd(SHT3X_CMD_CLR_STATUS_REG);
 }
 
 SensirionBase::ErrorCodes Sht3x::heaterOn() {
     const std::lock_guard<RecursiveMutex> lg(mutex);
-    return writeCmd(_address, SHT3X_CMD_HEATER_ON);
+    return writeCmd(SHT3X_CMD_HEATER_ON);
 }
 
 SensirionBase::ErrorCodes Sht3x::heaterOff() {
     const std::lock_guard<RecursiveMutex> lg(mutex);
-    return writeCmd(_address, SHT3X_CMD_HEATER_OFF);
+    return writeCmd(SHT3X_CMD_HEATER_OFF);
 }
 
 float Sht3x::_convert_raw_temp(uint16_t temperature_raw) {

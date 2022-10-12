@@ -80,23 +80,12 @@ public:
         SHT3X_LOALRT_SET,
     };
 
-    Sht3x(TwoWire& interface, Addr address, pin_t alertPin) :
-            SensirionBase(interface),
-            _address(address),
+    Sht3x(TwoWire& interface, uint8_t address, pin_t alertPin) :
+            SensirionBase(interface, address),
             _alertPin(alertPin),
             _sht3x_cmd_measure(SingleMode::SINGLE_NONE) {
         pinMode(_alertPin, INPUT);
     }
-
-    /**
-     * @brief Initialize the SHT3x interface
-     *
-     * @details Attempts to begin i2c transmission of the SHT3x sensor to
-     * validate the sensor can communicate
-     *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
-     */
-    SensirionBase::ErrorCodes init();
 
     /**
      * @brief Measure and read from an SHT sensor the temperature and humidity
@@ -277,7 +266,6 @@ private:
      */
     uint16_t _humidity_to_tick(int32_t humidity);
 
-    Addr _address;
     RecursiveMutex mutex;
     uint16_t _alertPin;
     uint16_t _sht3x_cmd_measure;

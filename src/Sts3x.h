@@ -96,23 +96,12 @@ public:
         STS3X_LOALRT_SET,
     };
 
-    Sts3x(TwoWire& interface, Addr address, pin_t alertPin) :
-            SensirionBase(interface),
-            _address(address),
+    Sts3x(TwoWire& interface, uint8_t address, pin_t alertPin) :
+            SensirionBase(interface, address),
             _alertPin(alertPin),
             _sts3x_cmd_measure(SingleMode::SINGLE_NONE) {
         pinMode(_alertPin, INPUT);
     }
-
-    /**
-     * @brief Initialize the STS3x interface
-     *
-     * @details Attempts to begin i2c transmission of the STS3x sensor to
-     * validate the sensor can communicate
-     *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
-     */
-    SensirionBase::ErrorCodes init();
 
     /**
      * @brief Measure and read from an STS sensor the temperature and humidity
@@ -265,7 +254,6 @@ private:
     uint16_t _temperature_to_tick(int32_t temperature);
 
     RecursiveMutex mutex;
-    Addr _address;
     uint16_t _alertPin;
     uint16_t _sts3x_cmd_measure;
 };

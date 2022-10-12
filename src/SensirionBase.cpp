@@ -40,15 +40,25 @@ constexpr unsigned int SENSIRION_MAX_BUFFER_WORDS = 32;
 
 Logger SensirionBase::driver_log("sensirion-driver");
 
-SensirionBase::ErrorCodes SensirionBase::readCmd(uint8_t address,
-                                        uint16_t command,
+SensirionBase::ErrorCodes SensirionBase::init() {
+    SensirionBase::ErrorCodes ret = SensirionBase::ErrorCodes::NO_ERROR;
+    _i2c.begin();
+    _i2c.beginTransmission(_address);
+    if (_i2c.endTransmission() != 0) {
+        driver_log.error("address invalid or device failed");
+        ret = SensirionBase::ErrorCodes::ERROR_FAIL;
+    }
+    return ret;
+}
+
+SensirionBase::ErrorCodes SensirionBase::readCmd(uint16_t command,
                                         uint16_t* data_words,
                                         uint16_t num_words,
                                         uint32_t delay_us) {
     uint8_t buf[SENSIRION_COMMAND_SIZE] {};
 
     fillCmdBytes(buf, command, NULL, 0);
-    size_t ret = writeRegister(address, buf, SENSIRION_COMMAND_SIZE);
+    size_t ret = writeRegister(buf, SENSIRION_COMMAND_SIZE);
 
     if (ret != SENSIRION_COMMAND_SIZE) {
         return ErrorCodes::ERROR_FAIL;
@@ -58,15 +68,15 @@ SensirionBase::ErrorCodes SensirionBase::readCmd(uint8_t address,
         delayMicroseconds(delay_us);
     }
 
-    return readWords(address, data_words, num_words);
+    return readWords(data_words, num_words);
 }
 
-SensirionBase::ErrorCodes SensirionBase::writeCmd(uint8_t address, uint16_t command) {
+SensirionBase::ErrorCodes SensirionBase::writeCmd(uint16_t command) {
     uint8_t buf[SENSIRION_COMMAND_SIZE];
     ErrorCodes ret = ErrorCodes::NO_ERROR;
 
     fillCmdBytes(buf, command, NULL, 0);
-    if(writeRegister(address, buf, SENSIRION_COMMAND_SIZE) !=
+    if(writeRegister(buf, SENSIRION_COMMAND_SIZE) !=
                     SENSIRION_COMMAND_SIZE) {
         ret = ErrorCodes::ERROR_FAIL;
         driver_log.error("failed write command: 0x%X",command);
@@ -74,7 +84,7 @@ SensirionBase::ErrorCodes SensirionBase::writeCmd(uint8_t address, uint16_t comm
     return ret;
 }
 
-SensirionBase::ErrorCodes SensirionBase::writeCmdWithArgs(uint8_t address, uint16_t command,
+SensirionBase::ErrorCodes SensirionBase::writeCmdWithArgs(uint16_t command,
                                           const uint16_t* data_words,
                                           uint16_t num_words) {
     uint8_t buf[SENSIRION_MAX_BUFFER_WORDS];
@@ -82,7 +92,7 @@ SensirionBase::ErrorCodes SensirionBase::writeCmdWithArgs(uint8_t address, uint1
 
     uint16_t buf_size = fillCmdBytes(buf, command, data_words, num_words);
 
-    if(writeRegister(address, buf, buf_size) != buf_size) {
+    if(writeRegister(buf, buf_size) != buf_size) {
         ret = ErrorCodes::ERROR_FAIL;
         driver_log.error("failed write command with args");
     }
@@ -136,15 +146,14 @@ uint16_t SensirionBase::fillCmdBytes(uint8_t* buf,
     return idx;
 }
 
-SensirionBase::ErrorCodes SensirionBase::readWordsAsBytes(uint8_t address,
-                                                        uint8_t* data,
+SensirionBase::ErrorCodes SensirionBase::readWordsAsBytes(uint8_t* data,
                                                         uint16_t num_words) {
     ErrorCodes ret = ErrorCodes::NO_ERROR; //assume success
     int size = num_words * (SENSIRION_WORD_SIZE + CRC8_LEN);
     uint16_t word_buf[SENSIRION_MAX_BUFFER_WORDS] {};
     uint8_t* const buf8 = (uint8_t*)word_buf;
 
-    if (!readRegister(address, buf8, size)) {
+    if (!readRegister(buf8, size)) {
         ret = ErrorCodes::ERROR_FAIL;
         driver_log.error("read register fail");
     }
@@ -167,13 +176,12 @@ SensirionBase::ErrorCodes SensirionBase::readWordsAsBytes(uint8_t address,
     return ret;
 }
 
-SensirionBase::ErrorCodes SensirionBase::readWords(uint8_t address,
-                                                uint16_t* data_words,
+SensirionBase::ErrorCodes SensirionBase::readWords(uint16_t* data_words,
                                                 uint16_t num_words) {
     const uint8_t* word_bytes;
 
     ErrorCodes ret =
-                    readWordsAsBytes(address, (uint8_t*)data_words, num_words);
+                    readWordsAsBytes((uint8_t*)data_words, num_words);
 
     if (ret != ErrorCodes::ERROR_FAIL) {
         for (int i = 0; i < num_words; ++i) {
@@ -188,20 +196,18 @@ SensirionBase::ErrorCodes SensirionBase::readWords(uint8_t address,
     return ret;
 }
 
-size_t SensirionBase::writeRegister(uint8_t address,
-                                const uint8_t* buf,
+size_t SensirionBase::writeRegister(const uint8_t* buf,
                                 size_t length) {
-    _i2c.beginTransmission(address);
+    _i2c.beginTransmission(_address);
     size_t ret = _i2c.write(buf, length);
     _i2c.endTransmission();
 
     return ret;
 }
 
-size_t SensirionBase::readRegister(uint8_t address,
-                                uint8_t* buf,
+size_t SensirionBase::readRegister(uint8_t* buf,
                                 size_t length) {
-    size_t readLength = (int)_i2c.requestFrom(address, length);
+    size_t readLength = (int)_i2c.requestFrom(_address, length);
     size_t count = 0;
     if (readLength != length) {
         _i2c.endTransmission();
