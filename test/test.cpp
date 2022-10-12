@@ -26,7 +26,7 @@ TEST_CASE("SHT tests") {
     float humidity = 0;
     Vector<float> data;
 
-    sht  = new (std::nothrow) Sht3x(Wire, Sht3x::Addr::ADDR_A, 0);
+    sht  = new (std::nothrow) Sht3x(Wire, Sht3x::ADDR_A, 0);
 
     //setup init failure
     Wire.end_transmission_return = endTransmissionReturns::TIMEOUT;
@@ -160,7 +160,7 @@ TEST_CASE("STS tests") {
     float temp = 0;
     Vector<float> data;
 
-    sts  = new (std::nothrow) Sts3x(Wire, Sts3x::Addr::ADDR_A, 0);
+    sts  = new (std::nothrow) Sts3x(Wire, Sts3x::ADDR_A, 0);
 
     //setup init failure
     Wire.end_transmission_return = endTransmissionReturns::TIMEOUT;

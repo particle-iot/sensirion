@@ -20,10 +20,8 @@
 class Sht3x : public SensirionBase {
 public:
 
-    enum Addr {
-        ADDR_A = 0x44,
-        ADDR_B = 0x45
-    };
+    static constexpr uint8_t ADDR_A {0x44u};
+    static constexpr uint8_t ADDR_B {0x45u};
 
     enum class Mode {
         SINGLE_SHOT,

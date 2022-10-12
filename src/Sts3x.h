@@ -36,10 +36,8 @@
 class Sts3x : public SensirionBase {
 public:
 
-    enum Addr {
-        ADDR_A = 0x4A,
-        ADDR_B = 0x4B
-    };
+    static constexpr uint8_t ADDR_A {0x4au};
+    static constexpr uint8_t ADDR_B {0x4bu};
 
     enum class Mode {
         SINGLE_SHOT,
