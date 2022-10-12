@@ -129,6 +129,7 @@ protected:
                                     uint16_t num_words);
 
     TwoWire& _i2c;
+    static Logger driver_log;
 private:
     /**
      * @brief Read bytes given a buffer that represents words from a sensirion

@@ -66,7 +66,7 @@ SensirionBase::ErrorCodes Sht3x::init() {
     _i2c.begin();
     _i2c.beginTransmission(_address);
     if (_i2c.endTransmission() != 0) {
-        Log.error("SHT-3x address invalid or device failed");
+        driver_log.error("SHT-3x address invalid or device failed");
         ret = SensirionBase::ErrorCodes::ERROR_FAIL;
     }
     return ret;
@@ -83,7 +83,7 @@ SensirionBase::ErrorCodes Sht3x::singleShotMeasureAndRead(float& temperature,
         ret = singleShotRead(temperature, humidity);
     }
     else {
-        Log.error("SHT-3x measure failed");
+        driver_log.error("SHT-3x measure failed");
         ret = SensirionBase::ErrorCodes::ERROR_FAIL;
     }
     return ret;
@@ -219,7 +219,7 @@ SensirionBase::ErrorCodes Sht3x::setAlertThd(AlertThd thd,
     if(writeCmdWithArgs(_address, write_cmd, &limitVal, 1) ==
                 ErrorCodes::ERROR_FAIL) {
         ret = ErrorCodes::ERROR_FAIL;
-        Log.info("failed to set alert limit");
+        driver_log.info("failed to set alert limit");
     }
 
     return ret;
@@ -261,7 +261,7 @@ SensirionBase::ErrorCodes Sht3x::getAlertThd(AlertThd thd,
     }
     else {
         ret = ErrorCodes::ERROR_FAIL;
-        Log.info("failed to get alert limit");
+        driver_log.info("failed to get alert limit");
     }
 
     return ret;

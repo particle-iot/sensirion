@@ -38,6 +38,8 @@ constexpr unsigned int CRC8_LEN = 1;
 constexpr unsigned int SENSIRION_COMMAND_SIZE = 2;
 constexpr unsigned int SENSIRION_MAX_BUFFER_WORDS = 32;
 
+Logger SensirionBase::driver_log("sensirion-driver");
+
 SensirionBase::ErrorCodes SensirionBase::readCmd(uint8_t address,
                                         uint16_t command,
                                         uint16_t* data_words,
@@ -67,7 +69,7 @@ SensirionBase::ErrorCodes SensirionBase::writeCmd(uint8_t address, uint16_t comm
     if(writeRegister(address, buf, SENSIRION_COMMAND_SIZE) !=
                     SENSIRION_COMMAND_SIZE) {
         ret = ErrorCodes::ERROR_FAIL;
-        Log.info("failed write command: 0x%X",command);
+        driver_log.error("failed write command: 0x%X",command);
     }
     return ret;
 }
@@ -82,7 +84,7 @@ SensirionBase::ErrorCodes SensirionBase::writeCmdWithArgs(uint8_t address, uint1
 
     if(writeRegister(address, buf, buf_size) != buf_size) {
         ret = ErrorCodes::ERROR_FAIL;
-        Log.info("failed write command with args");
+        driver_log.error("failed write command with args");
     }
     return ret;
 }
@@ -144,7 +146,7 @@ SensirionBase::ErrorCodes SensirionBase::readWordsAsBytes(uint8_t address,
 
     if (!readRegister(address, buf8, size)) {
         ret = ErrorCodes::ERROR_FAIL;
-        Log.error("Sensirion read register fail");
+        driver_log.error("read register fail");
     }
     else {
         /* check the CRC for each word */
@@ -152,7 +154,7 @@ SensirionBase::ErrorCodes SensirionBase::readWordsAsBytes(uint8_t address,
             if (!isChecksumMatch(&buf8[i], SENSIRION_WORD_SIZE,
                                             buf8[i + SENSIRION_WORD_SIZE])) {
                 ret = ErrorCodes::ERROR_FAIL;
-                Log.error("Sensirion checksum match failed");
+                driver_log.error("checksum match failed");
                 break;
             }
             else {
@@ -180,7 +182,7 @@ SensirionBase::ErrorCodes SensirionBase::readWords(uint8_t address,
         }
     }
     else {
-        Log.error("Sensirion read words failed");
+        driver_log.error("read words failed");
     }
 
     return ret;

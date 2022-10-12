@@ -50,7 +50,7 @@ SensirionBase::ErrorCodes Sts3x::init() {
     _i2c.begin();
     _i2c.beginTransmission(_address);
     if (_i2c.endTransmission() != 0) {
-        Log.error("STS-3x address invalid or device failed");
+        driver_log.error("STS-3x address invalid or device failed");
         ret = SensirionBase::ErrorCodes::ERROR_FAIL;
     }
     return ret;
@@ -66,7 +66,7 @@ SensirionBase::ErrorCodes Sts3x::singleShotMeasureAndRead(float& temperature,
         ret = singleShotRead(temperature);
     }
     else {
-        Log.error("STS-3x measure failed");
+        driver_log.error("STS-3x measure failed");
         ret = SensirionBase::ErrorCodes::ERROR_FAIL;
     }
     return ret;

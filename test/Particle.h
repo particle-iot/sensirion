@@ -290,6 +290,8 @@ private:
 
 class Logger {
 public:
+    Logger () {};
+    Logger (const char *name) {};
     void info(const char* str, ...) {};
     void error(const char* str, ...) {};
 };
