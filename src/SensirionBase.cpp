@@ -119,12 +119,6 @@ uint16_t SensirionBase::generateCrc(const uint8_t* data, uint8_t len) {
     return crc;
 }
 
-bool SensirionBase::isChecksumMatch(const uint8_t* data,
-                            uint16_t len,
-                            uint8_t checksum) {
-    return (generateCrc(data, len) == checksum);
-}
-
 uint16_t SensirionBase::fillCmdBytes(uint8_t* buf,
                                     uint16_t cmd,
                                     const uint16_t* args,
@@ -160,8 +154,7 @@ bool SensirionBase::readWordsAsBytes(uint8_t* data,
     else {
         /* check the CRC for each word */
         for (int i = 0, j = 0; i < size; i += SENSIRION_WORD_SIZE + CRC8_LEN) {
-            if (!isChecksumMatch(&buf8[i], SENSIRION_WORD_SIZE,
-                                            buf8[i + SENSIRION_WORD_SIZE])) {
+            if (generateCrc(&buf8[i], SENSIRION_WORD_SIZE) != buf8[i + SENSIRION_WORD_SIZE]) {
                 ret = false;
                 driver_log.error("checksum match failed");
                 break;

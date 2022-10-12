@@ -178,19 +178,4 @@ private:
      * @return the generated CRC
      */
     uint16_t generateCrc(const uint8_t* data, uint8_t len);
-
-    /**
-     * @brief Checks to see if CRCs match
-     *
-     * @details Used to check if the given CRC matches the calculated CRC of
-     * data that is passed to it
-     *
-     * @param[in] data buffer of data to calculate CRC
-     * @param[in] len length of buffer
-     * @param[in] checksum to compare against the calculated CRC
-     *
-     *
-     * @return TRUE if match, FALSE if no match
-     */
-    bool isChecksumMatch(const uint8_t* data, uint16_t len, uint8_t checksum);
 };
