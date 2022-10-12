@@ -40,18 +40,18 @@ constexpr unsigned int SENSIRION_MAX_BUFFER_WORDS = 32;
 
 Logger SensirionBase::driver_log("sensirion-driver");
 
-SensirionBase::ErrorCodes SensirionBase::init() {
-    SensirionBase::ErrorCodes ret = SensirionBase::ErrorCodes::NO_ERROR;
+bool SensirionBase::init() {
+    bool ret = true;
     _i2c.begin();
     _i2c.beginTransmission(_address);
     if (_i2c.endTransmission() != 0) {
         driver_log.error("address invalid or device failed");
-        ret = SensirionBase::ErrorCodes::ERROR_FAIL;
+        ret = false;
     }
     return ret;
 }
 
-SensirionBase::ErrorCodes SensirionBase::readCmd(uint16_t command,
+bool SensirionBase::readCmd(uint16_t command,
                                         uint16_t* data_words,
                                         uint16_t num_words,
                                         uint32_t delay_us) {
@@ -61,7 +61,7 @@ SensirionBase::ErrorCodes SensirionBase::readCmd(uint16_t command,
     size_t ret = writeRegister(buf, SENSIRION_COMMAND_SIZE);
 
     if (ret != SENSIRION_COMMAND_SIZE) {
-        return ErrorCodes::ERROR_FAIL;
+        return false;
     }
 
     if (delay_us) {
@@ -71,29 +71,29 @@ SensirionBase::ErrorCodes SensirionBase::readCmd(uint16_t command,
     return readWords(data_words, num_words);
 }
 
-SensirionBase::ErrorCodes SensirionBase::writeCmd(uint16_t command) {
+bool SensirionBase::writeCmd(uint16_t command) {
     uint8_t buf[SENSIRION_COMMAND_SIZE];
-    ErrorCodes ret = ErrorCodes::NO_ERROR;
+    bool ret = true;
 
     fillCmdBytes(buf, command, NULL, 0);
     if(writeRegister(buf, SENSIRION_COMMAND_SIZE) !=
                     SENSIRION_COMMAND_SIZE) {
-        ret = ErrorCodes::ERROR_FAIL;
+        ret = false;
         driver_log.error("failed write command: 0x%X",command);
     }
     return ret;
 }
 
-SensirionBase::ErrorCodes SensirionBase::writeCmdWithArgs(uint16_t command,
+bool SensirionBase::writeCmdWithArgs(uint16_t command,
                                           const uint16_t* data_words,
                                           uint16_t num_words) {
     uint8_t buf[SENSIRION_MAX_BUFFER_WORDS];
-    ErrorCodes ret = ErrorCodes::NO_ERROR;
+    bool ret = true;
 
     uint16_t buf_size = fillCmdBytes(buf, command, data_words, num_words);
 
     if(writeRegister(buf, buf_size) != buf_size) {
-        ret = ErrorCodes::ERROR_FAIL;
+        ret = false;
         driver_log.error("failed write command with args");
     }
     return ret;
@@ -146,15 +146,15 @@ uint16_t SensirionBase::fillCmdBytes(uint8_t* buf,
     return idx;
 }
 
-SensirionBase::ErrorCodes SensirionBase::readWordsAsBytes(uint8_t* data,
+bool SensirionBase::readWordsAsBytes(uint8_t* data,
                                                         uint16_t num_words) {
-    ErrorCodes ret = ErrorCodes::NO_ERROR; //assume success
+    bool ret = true; //assume success
     int size = num_words * (SENSIRION_WORD_SIZE + CRC8_LEN);
     uint16_t word_buf[SENSIRION_MAX_BUFFER_WORDS] {};
     uint8_t* const buf8 = (uint8_t*)word_buf;
 
     if (!readRegister(buf8, size)) {
-        ret = ErrorCodes::ERROR_FAIL;
+        ret = false;
         driver_log.error("read register fail");
     }
     else {
@@ -162,7 +162,7 @@ SensirionBase::ErrorCodes SensirionBase::readWordsAsBytes(uint8_t* data,
         for (int i = 0, j = 0; i < size; i += SENSIRION_WORD_SIZE + CRC8_LEN) {
             if (!isChecksumMatch(&buf8[i], SENSIRION_WORD_SIZE,
                                             buf8[i + SENSIRION_WORD_SIZE])) {
-                ret = ErrorCodes::ERROR_FAIL;
+                ret = false;
                 driver_log.error("checksum match failed");
                 break;
             }
@@ -176,14 +176,14 @@ SensirionBase::ErrorCodes SensirionBase::readWordsAsBytes(uint8_t* data,
     return ret;
 }
 
-SensirionBase::ErrorCodes SensirionBase::readWords(uint16_t* data_words,
+bool SensirionBase::readWords(uint16_t* data_words,
                                                 uint16_t num_words) {
     const uint8_t* word_bytes;
 
-    ErrorCodes ret =
+    bool ret =
                     readWordsAsBytes((uint8_t*)data_words, num_words);
 
-    if (ret != ErrorCodes::ERROR_FAIL) {
+    if (ret) {
         for (int i = 0; i < num_words; ++i) {
             word_bytes = (uint8_t*)&data_words[i];
             data_words[i] = ((uint16_t)word_bytes[0] << 8) | word_bytes[1];

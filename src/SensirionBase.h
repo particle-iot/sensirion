@@ -22,11 +22,6 @@
 
 class SensirionBase {
 public:
-    enum class ErrorCodes {
-        NO_ERROR,
-        ERROR_FAIL,
-    };
-
     SensirionBase(TwoWire& i2c, uint8_t address) : _i2c(i2c), _address(address) {};
 
     /**
@@ -35,9 +30,9 @@ public:
      * @details Attempts to begin i2c transmission of the sensor to
      * validate the sensor can communicate
      *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
+     * @return true on success, false on failure
      */
-    SensirionBase::ErrorCodes init();
+    bool init();
 
     /**
      * @brief Used to read a sensirion sensor
@@ -51,9 +46,9 @@ public:
      * @param[in] delay_us delay seconds between sending the read command,
      * and actually reading the results
      *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
+     * @return true on success, false on failure
      */
-    SensirionBase::ErrorCodes readCmd(uint16_t command,
+    bool readCmd(uint16_t command,
                                     uint16_t* data_words,
                                     uint16_t num_words,
                                     uint32_t delay_us = 0);
@@ -66,9 +61,9 @@ public:
      * @param[in] address of sensirion device to write
      * @param[in] command to write
      *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
+     * @return true on success, false on failure
      */
-    SensirionBase::ErrorCodes writeCmd(uint16_t command);
+    bool writeCmd(uint16_t command);
 
     /**
      * @brief Used to write a command with multiple arguments to a sensirion
@@ -84,7 +79,7 @@ public:
      *
      * @return <what does the function return (optional if void)>
      */
-    SensirionBase::ErrorCodes writeCmdWithArgs(uint16_t command,
+    bool writeCmdWithArgs(uint16_t command,
                                             const uint16_t* data_words,
                                             uint16_t num_words);
 
@@ -130,9 +125,9 @@ protected:
      * @param[out] buffer to store read words
      * @param[in] num_words number of words to read
      *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
+     * @return true on success, false on failure
      */
-    SensirionBase::ErrorCodes readWords(uint16_t* data_words,
+    bool readWords(uint16_t* data_words,
                                     uint16_t num_words);
 
     TwoWire& _i2c;
@@ -152,9 +147,9 @@ private:
      * @param[in] data buffer repesenting single bytes of a word to store
      * @param[in] num_words number of words to read
      *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
+     * @return true on success, false on failure
      */
-    SensirionBase::ErrorCodes readWordsAsBytes(uint8_t* data,
+    bool readWordsAsBytes(uint8_t* data,
                                             uint16_t num_words);
 
     /**

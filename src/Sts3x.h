@@ -112,9 +112,9 @@ public:
      *
      * @param[out] temperature measured and read in Celsius
      *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
+     * @return true on success, false on failure
      */
-    SensirionBase::ErrorCodes singleShotMeasureAndRead(float& temperature,
+    bool singleShotMeasureAndRead(float& temperature,
                     SingleMode s_setting = SingleMode::HIGH_NO_CLOCK_STRETCH);
     /**
      * @brief Measure from an STS sensor
@@ -127,9 +127,9 @@ public:
      * @param[in] s_setting single mode setting
      * @param[in] p_setting periodic mode setting
      *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
+     * @return true on success, false on failure
      */
-    SensirionBase::ErrorCodes measure(Mode mode = Mode::SINGLE_SHOT,
+    bool measure(Mode mode = Mode::SINGLE_SHOT,
                     SingleMode s_setting = SingleMode::HIGH_NO_CLOCK_STRETCH,
                     PeriodicMode p_setting = PeriodicMode::PERIODIC_NONE);
 
@@ -140,9 +140,9 @@ public:
      *
      * @param[out] temperature measured and read in Celsius
      *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
+     * @return true on success, false on failure
      */
-    SensirionBase::ErrorCodes singleShotRead(float& temperature);
+    bool singleShotRead(float& temperature);
 
     /**
      * @brief Read a started periodic mode measurement from an STS sensor.
@@ -154,9 +154,9 @@ public:
      *
      * @param[out] data contains the data read.
      *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
+     * @return true on success, false on failure
      */
-    SensirionBase::ErrorCodes periodicDataRead(Vector<float>& data);
+    bool periodicDataRead(Vector<float>& data);
 
     // /**
     //  * @brief <enter a brief one sentence description>
@@ -167,7 +167,7 @@ public:
     //  *
     //  * @return <what does the function return (optional if void)>
     //  */
-    // SensirionBase::ErrorCodes setAlertThd(AlertThd thd);
+    // bool setAlertThd(AlertThd thd);
 
     // /**
     //  * @brief <enter a brief one sentence description>
@@ -178,7 +178,7 @@ public:
     //  *
     //  * @return <what does the function return (optional if void)>
     //  */
-    // SensirionBase::ErrorCodes getAlertThd(AlertThd thd);
+    // bool getAlertThd(AlertThd thd);
 
     /**
      * @brief Read the STS status register
@@ -187,36 +187,36 @@ public:
      *
      * @param[out] status read from the register
      *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
+     * @return true on success, false on failure
      */
-    SensirionBase::ErrorCodes getStatus(uint16_t& status);
+    bool getStatus(uint16_t& status);
 
     /**
      * @brief CLEAR the STS status register
      *
      * @details Sends a command to clear the STS status register
      *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
+     * @return true on success, false on failure
      */
-    SensirionBase::ErrorCodes clearStatus();
+    bool clearStatus();
 
     /**
      * @brief Turns the heater on the STS to see plausability of values
      *
      * @details Sends the heater on command
      *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
+     * @return true on success, false on failure
      */
-    SensirionBase::ErrorCodes heaterOn();
+    bool heaterOn();
 
     /**
      * @brief Turns the heater on the STS off
      *
      * @details Sends the heater off command
      *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
+     * @return true on success, false on failure
      */
-    SensirionBase::ErrorCodes heaterOff();
+    bool heaterOff();
 
 private:
 
