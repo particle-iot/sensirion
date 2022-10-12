@@ -43,6 +43,14 @@ constexpr int FOUR_WORD_SIZE = 4;
 constexpr int EIGHT_WORD_SIZE = 8;
 constexpr int TEN_WORD_SIZE = 10;
 
+RecursiveMutex Sts3x::mutexA;
+RecursiveMutex Sts3x::mutexB;
+
+bool Sts3x::init() {
+    const std::lock_guard<RecursiveMutex> lg(mutex);
+    return SensirionBase::init();
+}
+
 bool Sts3x::singleShotMeasureAndRead(float& temperature,
                                                         SingleMode s_setting) {
     bool ret = true ;

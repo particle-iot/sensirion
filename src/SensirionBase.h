@@ -21,7 +21,7 @@
 #define SENSIRION_NUM_WORDS(x) (sizeof(x) / SENSIRION_WORD_SIZE)
 
 class SensirionBase {
-public:
+protected:
     SensirionBase(TwoWire& i2c, uint8_t address) : _i2c(i2c), _address(address) {};
 
     /**
@@ -83,7 +83,6 @@ public:
                                             const uint16_t* data_words,
                                             uint16_t num_words);
 
-protected:
     /**
      * @brief Read a register from a sensirion device
      *

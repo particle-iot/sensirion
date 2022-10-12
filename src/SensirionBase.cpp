@@ -45,7 +45,7 @@ bool SensirionBase::init() {
     _i2c.begin();
     _i2c.beginTransmission(_address);
     if (_i2c.endTransmission() != 0) {
-        driver_log.error("address invalid or device failed");
+        driver_log.error("address 0x%X invalid or device failed", _address);
         ret = false;
     }
     return ret;

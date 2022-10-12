@@ -82,10 +82,21 @@ public:
 
     Sht3x(TwoWire& interface, uint8_t address, pin_t alertPin) :
             SensirionBase(interface, address),
+            mutex(address == ADDR_A ? mutexA : mutexB),
             _alertPin(alertPin),
             _sht3x_cmd_measure(SingleMode::SINGLE_NONE) {
         pinMode(_alertPin, INPUT);
     }
+
+    /**
+     * @brief Initialize the interface
+     *
+     * @details Attempts to begin i2c transmission of the sensor to
+     * validate the sensor can communicate
+     *
+     * @return true on success, false on failure
+     */
+    bool init();
 
     /**
      * @brief Measure and read from an SHT sensor the temperature and humidity
@@ -266,7 +277,9 @@ private:
      */
     uint16_t _humidity_to_tick(int32_t humidity);
 
-    RecursiveMutex mutex;
+    static RecursiveMutex mutexA;
+    static RecursiveMutex mutexB;
+    RecursiveMutex& mutex;
     uint16_t _alertPin;
     uint16_t _sht3x_cmd_measure;
 };

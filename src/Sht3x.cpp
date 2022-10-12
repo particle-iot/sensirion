@@ -59,6 +59,14 @@ constexpr int FOUR_WORD_SIZE = 4;
 constexpr int EIGHT_WORD_SIZE = 8;
 constexpr int TEN_WORD_SIZE = 10;
 
+RecursiveMutex Sht3x::mutexA;
+RecursiveMutex Sht3x::mutexB;
+
+bool Sht3x::init() {
+    const std::lock_guard<RecursiveMutex> lg(mutex);
+    return SensirionBase::init();
+}
+
 bool Sht3x::singleShotMeasureAndRead(float& temperature,
                                                         float& humidity,
                                                         SingleMode s_setting) {
