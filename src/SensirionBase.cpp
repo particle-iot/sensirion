@@ -212,14 +212,3 @@ size_t SensirionBase::readRegister(uint8_t address,
     }
     return count;
 }
-
-SensirionBase::ErrorCodes SensirionBase::generalCallReset() {
-    uint8_t data = 0x06;
-    ErrorCodes ret = ErrorCodes::NO_ERROR;
-
-    if(writeRegister(0, &data, (uint16_t)sizeof(data)) != (uint16_t)sizeof(data)) {
-        ret = ErrorCodes::ERROR_FAIL;
-    }
-
-    return ret;
-}

@@ -111,16 +111,6 @@ protected:
     size_t writeRegister(uint8_t address, const uint8_t* buf, size_t length);
 
     /**
-     * @brief Resets all devices on the i2c bus
-     *
-     * @details Will reset all of the devices on the i2c bus. This means
-     * all devices, not just sensirion devices
-     *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
-     */
-    SensirionBase::ErrorCodes generalCallReset();
-
-    /**
      * @brief Read words from a sensirion device
      *
      * @details Used to read a single word, or multiple words from a sensirion
