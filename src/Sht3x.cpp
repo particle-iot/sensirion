@@ -111,8 +111,7 @@ bool Sht3x::singleShotRead(float& temperature,
     uint16_t words[2] {};
     const std::lock_guard<RecursiveMutex> lg(mutex);
 
-    bool ret =
-        readWords(words, SENSIRION_NUM_WORDS(words));
+    bool ret = readWords(words, 2);
 
     temperature = _convert_raw_temp(words[0]);
     humidity = _convert_raw_humidity(words[1]);

@@ -88,13 +88,12 @@ bool Sts3x::measure(Mode mode,
 }
 
 bool Sts3x::singleShotRead(float& temperature) {
-    uint16_t words[1] {};
+    uint16_t raw_temp;
     const std::lock_guard<RecursiveMutex> lg(mutex);
 
-    bool ret =
-        readWords(words, SENSIRION_NUM_WORDS(words));
+    bool ret = readWords(&raw_temp, 1);
 
-    temperature = _convert_raw_temp(words[0]);
+    temperature = _convert_raw_temp(raw_temp);
 
     return ret;
 }
