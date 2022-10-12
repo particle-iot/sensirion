@@ -24,7 +24,7 @@ TEST_CASE("SHT tests") {
 
     float temp = 0;
     float humidity = 0;
-    Vector<float> data;
+    Vector<std::pair<float, float>> data;
 
     sht  = new (std::nothrow) Sht3x(Wire, Sht3x::ADDR_A, 0);
 

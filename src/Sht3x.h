@@ -154,7 +154,7 @@ public:
      *
      * @return true on success, false on failure
      */
-    bool periodicDataRead(Vector<float>& data);
+    bool periodicDataRead(Vector<std::pair<float, float>>& data);
 
     /**
      * @brief Set thresholds for alert mode

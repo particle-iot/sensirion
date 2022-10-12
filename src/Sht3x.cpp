@@ -120,7 +120,7 @@ bool Sht3x::singleShotRead(float& temperature,
     return ret;
 }
 
-bool Sht3x::periodicDataRead(Vector<float>& data) {
+bool Sht3x::periodicDataRead(Vector<std::pair<float, float>>& data) {
     const std::lock_guard<RecursiveMutex> lg(mutex);
 
     int num_of_words = _get_mps_size_to_words();
@@ -132,8 +132,7 @@ bool Sht3x::periodicDataRead(Vector<float>& data) {
     }
 
     for(int i = 0; i < num_of_words; i+=2) {
-        data.append(_convert_raw_temp(words.at(i)));
-        data.append(_convert_raw_humidity(words.at(i+1)));
+        data.append(std::make_pair(words.at(i), words.at(i + 1)));
     }
 
     return ret;
