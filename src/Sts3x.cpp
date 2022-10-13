@@ -19,24 +19,17 @@
 
 #include "Sts3x.h"
 
-constexpr uint16_t STS3x_PERIODIC_READ_CMD = 0xE000;
-constexpr uint16_t STS3X_BREAK_CMD = 0x3093;
-constexpr uint16_t STS3X_CMD_READ_STATUS_REG = 0xF32D;
-constexpr uint16_t STS3X_CMD_CLR_STATUS_REG = 0x3041;
-constexpr uint16_t STS3X_CMD_HEATER_ON = 0x306D;
-constexpr uint16_t STS3X_CMD_HEATER_OFF = 0x3066;
+constexpr std::uint16_t STS3x_PERIODIC_READ_CMD = 0xE000;
+constexpr std::uint16_t STS3X_BREAK_CMD = 0x3093;
+constexpr std::uint16_t STS3X_CMD_READ_STATUS_REG = 0xF32D;
+constexpr std::uint16_t STS3X_CMD_CLR_STATUS_REG = 0x3041;
+constexpr std::uint16_t STS3X_CMD_HEATER_ON = 0x306D;
+constexpr std::uint16_t STS3X_CMD_HEATER_OFF = 0x3066;
 
-constexpr uint16_t STS3X_CMD_DURATION_USEC = 1000;
-constexpr uint16_t STS3X_TEMPERATURE_LIMIT_MSK = 0x01FFU;
+constexpr std::uint16_t STS3X_CMD_DURATION_USEC = 1000;
+constexpr std::uint16_t STS3X_TEMPERATURE_LIMIT_MSK = 0x01FFU;
 
-constexpr unsigned int RAW_TEMP_ADC_COUNT = 21875;
-constexpr unsigned int DIVIDE_BY_POWER = 13;
-constexpr unsigned int RAW_TEMP_CONST = 45000;
-constexpr int DIVIDE_BY_TICK = 15;
-constexpr int TEMP_ADD_CONSTANT = 552195000;
-constexpr int TEMP_MULTIPLY_CONSTANT = 12271;
-constexpr float SENSIRION_SCALE = 1000.0F;
-constexpr uint16_t STS_DELIMITER = 0xFFFF;
+constexpr std::uint16_t STS_DELIMITER = 0xFFFF;
 
 constexpr int ONE_WORD_SIZE = 1;
 constexpr int TWO_WORD_SIZE = 2;
@@ -72,8 +65,8 @@ bool Sts3x::measure(Mode mode, SingleMode s_setting, PeriodicMode p_setting)
     bool ret = true;
     const std::lock_guard<RecursiveMutex> lg(mutex);
 
-    _sts3x_cmd_measure =
-      (mode == Mode::SINGLE_SHOT) ? (uint16_t)s_setting : (uint16_t)p_setting;
+    _sts3x_cmd_measure = (mode == Mode::SINGLE_SHOT) ? (std::uint16_t)s_setting
+                                                     : (std::uint16_t)p_setting;
 
     // break command to stop a previous periodic mode measure
     ret = writeCmd(STS3X_BREAK_CMD);
@@ -90,12 +83,12 @@ bool Sts3x::measure(Mode mode, SingleMode s_setting, PeriodicMode p_setting)
 
 bool Sts3x::singleShotRead(float &temperature)
 {
-    uint16_t raw_temp;
+    std::uint16_t raw_temp;
     const std::lock_guard<RecursiveMutex> lg(mutex);
 
     bool ret = readWords(&raw_temp, 1);
 
-    temperature = _convert_raw_temp(raw_temp);
+    temperature = convert_raw_temp(raw_temp);
 
     return ret;
 }
@@ -104,7 +97,7 @@ bool Sts3x::periodicDataRead(Vector<float> &data)
 {
     const std::lock_guard<RecursiveMutex> lg(mutex);
     int num_of_words = _get_mps_size_to_words();
-    Vector<uint16_t> words(num_of_words);
+    Vector<std::uint16_t> words(num_of_words);
     bool ret = false;
 
     if (writeCmd(STS3x_PERIODIC_READ_CMD)) {
@@ -113,7 +106,7 @@ bool Sts3x::periodicDataRead(Vector<float> &data)
 
     for (int i = 0; i < num_of_words; i++) {
         if (words.at(i) != STS_DELIMITER) {
-            data.append(_convert_raw_temp(words.at(i)));
+            data.append(convert_raw_temp(words.at(i)));
         }
     }
 
@@ -130,7 +123,6 @@ int Sts3x::_get_mps_size_to_words()
         case LOW_05_MPS:
             size = ONE_WORD_SIZE;
             break;
-
         case HIGH_1_MPS:
         case MEDIUM_1_MPS:
         case LOW_1_MPS:
@@ -162,11 +154,11 @@ int Sts3x::_get_mps_size_to_words()
 
 bool Sts3x::setAlertThreshold(AlertThreshold limit, float temperature)
 {
-    uint16_t limitVal = 0U;
-    uint16_t write_cmd {};
+    std::uint16_t limitVal = 0U;
+    std::uint16_t write_cmd {};
     bool ret = true;
 
-    uint16_t rawT = _temperature_to_tick(temperature * SENSIRION_SCALE);
+    std::uint16_t rawT = temperature_to_tick(temperature);
 
     /* convert inputs to alert threshold word */
     limitVal = ((rawT >> 7) & STS3X_TEMPERATURE_LIMIT_MSK);
@@ -175,15 +167,12 @@ bool Sts3x::setAlertThreshold(AlertThreshold limit, float temperature)
         case AlertThreshold::STS3X_HIALRT_SET:
             write_cmd = WRITE_HIALRT_LIM_SET;
             break;
-
         case AlertThreshold::STS3X_HIALRT_CLR:
             write_cmd = WRITE_HIALRT_LIM_CLR;
             break;
-
         case AlertThreshold::STS3X_LOALRT_CLR:
             write_cmd = WRITE_LOALRT_LIM_CLR;
             break;
-
         case AlertThreshold::STS3X_LOALRT_SET:
             write_cmd = WRITE_LOALRT_LIM_SET;
             break;
@@ -199,8 +188,8 @@ bool Sts3x::setAlertThreshold(AlertThreshold limit, float temperature)
 
 bool Sts3x::getAlertThreshold(AlertThreshold limit, float &temperature)
 {
-    uint16_t word;
-    uint16_t read_cmd {};
+    std::uint16_t word;
+    std::uint16_t read_cmd {};
 
     bool ret = true;
 
@@ -208,24 +197,21 @@ bool Sts3x::getAlertThreshold(AlertThreshold limit, float &temperature)
         case AlertThreshold::STS3X_HIALRT_SET:
             read_cmd = READ_HIALRT_LIM_SET;
             break;
-
         case AlertThreshold::STS3X_HIALRT_CLR:
             read_cmd = READ_HIALRT_LIM_CLR;
             break;
-
         case AlertThreshold::STS3X_LOALRT_CLR:
             read_cmd = READ_LOALRT_LIM_CLR;
             break;
-
         case AlertThreshold::STS3X_LOALRT_SET:
             read_cmd = READ_LOALRT_LIM_SET;
             break;
     }
 
-    if (writeCmdWithArgs(read_cmd, &word, 1)) {
+    if (writeCmd(read_cmd) && readWords(&word, 1)) {
         /* convert threshold word to alert settings in 10*%RH & 10*°C */
-        uint16_t rawT = ((word & STS3X_TEMPERATURE_LIMIT_MSK) << 7);
-        temperature = _convert_raw_temp(rawT);
+        std::uint16_t rawT = ((word & STS3X_TEMPERATURE_LIMIT_MSK) << 7);
+        temperature = convert_raw_temp(rawT);
     } else {
         ret = false;
         Log.info("failed to get alert limit");
@@ -234,7 +220,7 @@ bool Sts3x::getAlertThreshold(AlertThreshold limit, float &temperature)
     return ret;
 }
 
-bool Sts3x::getStatus(uint16_t &status)
+bool Sts3x::getStatus(std::uint16_t &status)
 {
     const std::lock_guard<RecursiveMutex> lg(mutex);
     return readCmd(
@@ -258,19 +244,4 @@ bool Sts3x::heaterOff()
 {
     const std::lock_guard<RecursiveMutex> lg(mutex);
     return writeCmd(STS3X_CMD_HEATER_OFF);
-}
-
-float Sts3x::_convert_raw_temp(uint16_t temperature_raw)
-{
-    return (((RAW_TEMP_ADC_COUNT * (std::int32_t)temperature_raw)
-             >> DIVIDE_BY_POWER)
-            - RAW_TEMP_CONST)
-           / SENSIRION_SCALE;
-}
-
-uint16_t Sts3x::_temperature_to_tick(std::int32_t temperature)
-{
-    return (uint16_t
-    )((temperature * TEMP_MULTIPLY_CONSTANT + TEMP_ADD_CONSTANT)
-      >> DIVIDE_BY_TICK);
 }

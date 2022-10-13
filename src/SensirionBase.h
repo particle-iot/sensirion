@@ -140,7 +140,45 @@ protected:
     std::uint8_t _address;
     static Logger driver_log;
 
+    static constexpr float convert_raw_temp(std::uint16_t temperature_raw)
+    {
+        return (((RAW_TEMP_ADC_COUNT * temperature_raw) >> DIVIDE_BY_POWER)
+                - RAW_TEMP_CONST)
+               / SENSIRION_SCALE;
+    }
+
+    static constexpr float convert_raw_humidity(std::uint16_t humidity_raw)
+    {
+        return ((RAW_HUMIDITY_ADC_COUNT * humidity_raw) >> DIVIDE_BY_POWER)
+               / SENSIRION_SCALE;
+    }
+
+    static constexpr std::uint16_t temperature_to_tick(float temperature)
+    {
+        return (static_cast<int>(SENSIRION_SCALE * temperature)
+                  * TEMP_MULTIPLY_CONSTANT
+                + TEMP_ADD_CONSTANT)
+               >> DIVIDE_BY_TICK;
+    }
+
+    static constexpr std::uint16_t humidity_to_tick(float humidity)
+    {
+        return (static_cast<int>(SENSIRION_SCALE * humidity)
+                * HUMID_MULT_CONSTANT)
+               >> DIVIDE_BY_TICK;
+    }
+
 private:
+    static constexpr int RAW_TEMP_ADC_COUNT = 21875;
+    static constexpr int RAW_HUMIDITY_ADC_COUNT = 12500;
+    static constexpr int DIVIDE_BY_POWER = 13;
+    static constexpr int DIVIDE_BY_TICK = 15;
+    static constexpr int TEMP_ADD_CONSTANT = 552195000;
+    static constexpr int TEMP_MULTIPLY_CONSTANT = 12271;
+    static constexpr int HUMID_MULT_CONSTANT = 21474;
+    static constexpr int RAW_TEMP_CONST = 45000;
+    static constexpr float SENSIRION_SCALE = 1000.0F;
+
     /**
      * @brief Read bytes given a buffer that represents words from a sensirion
      * device

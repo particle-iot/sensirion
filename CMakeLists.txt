@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.2)
 project (sensirion-test)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
 
@@ -14,8 +14,9 @@ add_definitions(-DLOG_DISABLE)
 add_definitions(-DRELEASE_BUILD)
 add_definitions(-DUNIT_TEST)
 
-if (CMAKE_COMPILER_IS_GNUCXX)
+if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
   set(GCOV_ENABLE TRUE)
+  add_compile_options(-Wall -Wextra)
 endif()
 
 if (GCOV_ENABLE)

@@ -164,7 +164,7 @@ private:
     hal_i2c_interface_t _i2c;
     size_t index;
 public:
-    TwoWire(hal_i2c_interface_t i2c, const hal_i2c_config_t& config) {};
+    TwoWire(hal_i2c_interface_t, const hal_i2c_config_t&) {};
     ~TwoWire() {};
     inline void setClock(uint32_t speed) {
         setSpeed(speed);
@@ -177,13 +177,13 @@ public:
     void begin(int) {};
     void beginTransmission(uint8_t) {};
     void beginTransmission(int) {};
-    void beginTransmission(const WireTransmission& transfer) {};
+    void beginTransmission(const WireTransmission&) {};
     void end();
     uint8_t endTransmission(void) {return end_transmission_return;}
     uint8_t endTransmission(uint8_t) {return end_transmission_return;}
     size_t requestFrom(uint8_t, size_t) {return num_bytes_to_read;}
     size_t requestFrom(uint8_t, size_t, uint8_t) {return num_bytes_to_read;}
-    size_t requestFrom(const WireTransmission& transfer) {return num_bytes_to_read;}
+    size_t requestFrom(const WireTransmission&) {return num_bytes_to_read;}
     size_t write(uint8_t) {return num_bytes_to_write;}
     size_t write(const uint8_t *, size_t) {return num_bytes_to_write;}
     int available(void) {return num_bytes_to_read;}
@@ -291,9 +291,9 @@ private:
 class Logger {
 public:
     Logger () {};
-    Logger (const char *name) {};
-    void info(const char* str, ...) {};
-    void error(const char* str, ...) {};
+    Logger (const char *) {};
+    void info(const char*, ...) {};
+    void error(const char*, ...) {};
 };
 
 extern SystemClass System;

@@ -59,16 +59,6 @@ constexpr std::uint16_t SHT3X_CMD_DURATION_USEC = 1000;
 constexpr std::uint16_t SHT3X_HUMIDITY_LIMIT_MSK = 0xFE00U;
 constexpr std::uint16_t SHT3X_TEMPERATURE_LIMIT_MSK = 0x01FFU;
 
-constexpr unsigned int RAW_TEMP_ADC_COUNT = 21875;
-constexpr unsigned int RAW_HUMIDITY_ADC_COUNT = 12500;
-constexpr unsigned int DIVIDE_BY_POWER = 13;
-constexpr int DIVIDE_BY_TICK = 15;
-constexpr int TEMP_ADD_CONSTANT = 552195000;
-constexpr int TEMP_MULTIPLY_CONSTANT = 12271;
-constexpr int HUMID_MULT_CONSTANT = 21474;
-constexpr unsigned int RAW_TEMP_CONST = 45000;
-constexpr float SENSIRION_SCALE = 1000.0F;
-
 constexpr int ONE_WORD_SIZE = 1;
 constexpr int TWO_WORD_SIZE = 2;
 constexpr int FOUR_WORD_SIZE = 4;
@@ -128,8 +118,8 @@ bool Sht3x::singleShotRead(float &temperature, float &humidity)
 
     bool ret = readWords(words, 2);
 
-    temperature = _convert_raw_temp(words[0]);
-    humidity = _convert_raw_humidity(words[1]);
+    temperature = convert_raw_temp(words[0]);
+    humidity = convert_raw_humidity(words[1]);
 
     return ret;
 }
@@ -163,7 +153,6 @@ int Sht3x::_get_mps_size_to_words()
         case LOW_05_MPS:
             size = ONE_WORD_SIZE;
             break;
-
         case HIGH_1_MPS:
         case MEDIUM_1_MPS:
         case LOW_1_MPS:
@@ -202,8 +191,8 @@ bool Sht3x::setAlertThreshold(
     bool ret = true;
     const std::lock_guard<RecursiveMutex> lg(mutex);
 
-    std::uint16_t rawT = _temperature_to_tick(temperature * SENSIRION_SCALE);
-    std::uint16_t rawRH = _humidity_to_tick(humidity * SENSIRION_SCALE);
+    std::uint16_t rawT = temperature_to_tick(temperature);
+    std::uint16_t rawRH = humidity_to_tick(humidity);
 
     /* convert inputs to alert threshold word */
     limitVal = (rawRH & SHT3X_HUMIDITY_LIMIT_MSK);
@@ -213,15 +202,12 @@ bool Sht3x::setAlertThreshold(
         case AlertThreshold::SHT3X_HIALRT_SET:
             write_cmd = WRITE_HIALRT_LIM_SET;
             break;
-
         case AlertThreshold::SHT3X_HIALRT_CLR:
             write_cmd = WRITE_HIALRT_LIM_CLR;
             break;
-
         case AlertThreshold::SHT3X_LOALRT_CLR:
             write_cmd = WRITE_LOALRT_LIM_CLR;
             break;
-
         case AlertThreshold::SHT3X_LOALRT_SET:
             write_cmd = WRITE_LOALRT_LIM_SET;
             break;
@@ -248,27 +234,24 @@ bool Sht3x::getAlertThreshold(
         case AlertThreshold::SHT3X_HIALRT_SET:
             read_cmd = READ_HIALRT_LIM_SET;
             break;
-
         case AlertThreshold::SHT3X_HIALRT_CLR:
             read_cmd = READ_HIALRT_LIM_CLR;
             break;
-
         case AlertThreshold::SHT3X_LOALRT_CLR:
             read_cmd = READ_LOALRT_LIM_CLR;
             break;
-
         case AlertThreshold::SHT3X_LOALRT_SET:
             read_cmd = READ_LOALRT_LIM_SET;
             break;
     }
 
-    if (writeCmdWithArgs(read_cmd, &word, 1)) {
+    if (writeCmd(read_cmd) && readWords(&word, 1)) {
         /* convert threshold word to alert settings in 10*%RH & 10*°C */
         std::uint16_t rawRH = (word & SHT3X_HUMIDITY_LIMIT_MSK);
         std::uint16_t rawT = ((word & SHT3X_TEMPERATURE_LIMIT_MSK) << 7);
 
-        humidity = _convert_raw_humidity(rawRH);
-        temperature = _convert_raw_temp(rawT);
+        humidity = convert_raw_humidity(rawRH);
+        temperature = convert_raw_temp(rawT);
     } else {
         ret = false;
         driver_log.info("failed to get alert limit");
@@ -301,31 +284,4 @@ bool Sht3x::heaterOff()
 {
     const std::lock_guard<RecursiveMutex> lg(mutex);
     return writeCmd(SHT3X_CMD_HEATER_OFF);
-}
-
-float Sht3x::_convert_raw_temp(std::uint16_t temperature_raw)
-{
-    return (((RAW_TEMP_ADC_COUNT * (std::int32_t)temperature_raw)
-             >> DIVIDE_BY_POWER)
-            - RAW_TEMP_CONST)
-           / SENSIRION_SCALE;
-}
-
-float Sht3x::_convert_raw_humidity(std::uint16_t humidity_raw)
-{
-    return ((RAW_HUMIDITY_ADC_COUNT * (std::int32_t)humidity_raw)
-            >> DIVIDE_BY_POWER)
-           / SENSIRION_SCALE;
-}
-
-std::uint16_t Sht3x::_temperature_to_tick(std::int32_t temperature)
-{
-    return (std::uint16_t
-    )((temperature * TEMP_MULTIPLY_CONSTANT + TEMP_ADD_CONSTANT)
-      >> DIVIDE_BY_TICK);
-}
-
-std::uint16_t Sht3x::_humidity_to_tick(std::int32_t humidity)
-{
-    return (std::uint16_t)((humidity * HUMID_MULT_CONSTANT) >> DIVIDE_BY_TICK);
 }
