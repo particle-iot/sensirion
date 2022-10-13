@@ -53,7 +53,8 @@ constexpr unsigned int SENSIRION_MAX_BUFFER_WORDS = 32;
 
 Logger SensirionBase::driver_log("sensirion-driver");
 
-bool SensirionBase::init() {
+bool SensirionBase::init()
+{
     bool ret = true;
     _i2c.begin();
     _i2c.beginTransmission(_address);
@@ -64,10 +65,10 @@ bool SensirionBase::init() {
     return ret;
 }
 
-bool SensirionBase::readCmd(uint16_t command,
-                                        uint16_t* data_words,
-                                        uint16_t num_words,
-                                        uint32_t delay_us) {
+bool SensirionBase::readCmd(
+  uint16_t command, uint16_t *data_words, uint16_t num_words, uint32_t delay_us
+)
+{
     uint8_t buf[SENSIRION_COMMAND_SIZE] {};
 
     fillCmdBytes(buf, command, NULL, 0);
@@ -84,35 +85,37 @@ bool SensirionBase::readCmd(uint16_t command,
     return readWords(data_words, num_words);
 }
 
-bool SensirionBase::writeCmd(uint16_t command) {
+bool SensirionBase::writeCmd(uint16_t command)
+{
     uint8_t buf[SENSIRION_COMMAND_SIZE];
     bool ret = true;
 
     fillCmdBytes(buf, command, NULL, 0);
-    if(writeRegister(buf, SENSIRION_COMMAND_SIZE) !=
-                    SENSIRION_COMMAND_SIZE) {
+    if (writeRegister(buf, SENSIRION_COMMAND_SIZE) != SENSIRION_COMMAND_SIZE) {
         ret = false;
-        driver_log.error("failed write command: 0x%X",command);
+        driver_log.error("failed write command: 0x%X", command);
     }
     return ret;
 }
 
-bool SensirionBase::writeCmdWithArgs(uint16_t command,
-                                          const uint16_t* data_words,
-                                          uint16_t num_words) {
+bool SensirionBase::writeCmdWithArgs(
+  uint16_t command, const uint16_t *data_words, uint16_t num_words
+)
+{
     uint8_t buf[SENSIRION_MAX_BUFFER_WORDS];
     bool ret = true;
 
     uint16_t buf_size = fillCmdBytes(buf, command, data_words, num_words);
 
-    if(writeRegister(buf, buf_size) != buf_size) {
+    if (writeRegister(buf, buf_size) != buf_size) {
         ret = false;
         driver_log.error("failed write command with args");
     }
     return ret;
 }
 
-uint16_t SensirionBase::generateCrc(const uint8_t* data, uint8_t len) {
+uint16_t SensirionBase::generateCrc(const uint8_t *data, uint8_t len)
+{
     uint16_t current_byte;
     uint8_t crc = CRC8_INIT;
     uint8_t crc_bit;
@@ -123,8 +126,7 @@ uint16_t SensirionBase::generateCrc(const uint8_t* data, uint8_t len) {
         for (crc_bit = 8; crc_bit > 0; --crc_bit) {
             if (crc & 0x80) {
                 crc = (crc << 1) ^ CRC8_POLYNOMIAL;
-            }
-            else {
+            } else {
                 crc = (crc << 1);
             }
         }
@@ -132,10 +134,10 @@ uint16_t SensirionBase::generateCrc(const uint8_t* data, uint8_t len) {
     return crc;
 }
 
-uint16_t SensirionBase::fillCmdBytes(uint8_t* buf,
-                                    uint16_t cmd,
-                                    const uint16_t* args,
-                                    uint8_t num_args) {
+uint16_t SensirionBase::fillCmdBytes(
+  uint8_t *buf, uint16_t cmd, const uint16_t *args, uint8_t num_args
+)
+{
     uint8_t crc;
     uint16_t idx = 0;
 
@@ -146,33 +148,30 @@ uint16_t SensirionBase::fillCmdBytes(uint8_t* buf,
         buf[idx++] = (uint8_t)((args[i] & 0xFF00) >> 8);
         buf[idx++] = (uint8_t)((args[i] & 0x00FF) >> 0);
 
-        crc = generateCrc((uint8_t*)&buf[idx - 2],
-                                            SENSIRION_WORD_SIZE);
+        crc = generateCrc((uint8_t *)&buf[idx - 2], SENSIRION_WORD_SIZE);
         buf[idx++] = crc;
     }
     return idx;
 }
 
-bool SensirionBase::readWordsAsBytes(uint8_t* data,
-                                                        uint16_t num_words) {
-    bool ret = true; //assume success
+bool SensirionBase::readWordsAsBytes(uint8_t *data, uint16_t num_words)
+{
+    bool ret = true; // assume success
     int size = num_words * (SENSIRION_WORD_SIZE + CRC8_LEN);
     uint16_t word_buf[SENSIRION_MAX_BUFFER_WORDS] {};
-    uint8_t* const buf8 = (uint8_t*)word_buf;
+    uint8_t *const buf8 = (uint8_t *)word_buf;
 
     if (!readRegister(buf8, size)) {
         ret = false;
         driver_log.error("read register fail");
-    }
-    else {
+    } else {
         /* check the CRC for each word */
         for (int i = 0, j = 0; i < size; i += SENSIRION_WORD_SIZE + CRC8_LEN) {
             if (generateCrc(&buf8[i], SENSIRION_WORD_SIZE) != buf8[i + SENSIRION_WORD_SIZE]) {
                 ret = false;
                 driver_log.error("checksum match failed");
                 break;
-            }
-            else {
+            } else {
                 data[j++] = buf8[i];
                 data[j++] = buf8[i + 1];
             }
@@ -182,28 +181,26 @@ bool SensirionBase::readWordsAsBytes(uint8_t* data,
     return ret;
 }
 
-bool SensirionBase::readWords(uint16_t* data_words,
-                                                uint16_t num_words) {
-    const uint8_t* word_bytes;
+bool SensirionBase::readWords(uint16_t *data_words, uint16_t num_words)
+{
+    const uint8_t *word_bytes;
 
-    bool ret =
-                    readWordsAsBytes((uint8_t*)data_words, num_words);
+    bool ret = readWordsAsBytes((uint8_t *)data_words, num_words);
 
     if (ret) {
         for (int i = 0; i < num_words; ++i) {
-            word_bytes = (uint8_t*)&data_words[i];
+            word_bytes = (uint8_t *)&data_words[i];
             data_words[i] = ((uint16_t)word_bytes[0] << 8) | word_bytes[1];
         }
-    }
-    else {
+    } else {
         driver_log.error("read words failed");
     }
 
     return ret;
 }
 
-size_t SensirionBase::writeRegister(const uint8_t* buf,
-                                size_t length) {
+size_t SensirionBase::writeRegister(const uint8_t *buf, size_t length)
+{
     _i2c.beginTransmission(_address);
     size_t ret = _i2c.write(buf, length);
     _i2c.endTransmission();
@@ -211,14 +208,13 @@ size_t SensirionBase::writeRegister(const uint8_t* buf,
     return ret;
 }
 
-size_t SensirionBase::readRegister(uint8_t* buf,
-                                size_t length) {
+size_t SensirionBase::readRegister(uint8_t *buf, size_t length)
+{
     size_t readLength = (int)_i2c.requestFrom(_address, length);
     size_t count = 0;
     if (readLength != length) {
         _i2c.endTransmission();
-    }
-    else {
+    } else {
         while (_i2c.available() && length--) {
             *buf++ = _i2c.read();
             count++;

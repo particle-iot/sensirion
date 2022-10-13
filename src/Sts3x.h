@@ -48,7 +48,6 @@
 
 class Sts3x : public SensirionBase {
 public:
-
     static constexpr uint8_t ADDR_A {0x4au};
     static constexpr uint8_t ADDR_B {0x4bu};
 
@@ -57,14 +56,14 @@ public:
         PERIODIC_DATA,
     };
 
-    enum AlertReadCmd: uint16_t {
+    enum AlertReadCmd : uint16_t {
         READ_HIALRT_LIM_SET = 0xE11F,
         READ_HIALRT_LIM_CLR = 0xE114,
         READ_LOALRT_LIM_CLR = 0xE109,
         READ_LOALRT_LIM_SET = 0xE102,
     };
 
-    enum AlertWriteCmd: uint16_t {
+    enum AlertWriteCmd : uint16_t {
         WRITE_HIALRT_LIM_SET = 0x611D,
         WRITE_HIALRT_LIM_CLR = 0x6116,
         WRITE_LOALRT_LIM_CLR = 0x610B,
@@ -107,11 +106,12 @@ public:
         STS3X_LOALRT_SET,
     };
 
-    Sts3x(TwoWire& interface, uint8_t address, pin_t alertPin) :
-            SensirionBase(interface, address),
-            mutex(address == ADDR_A ? mutexA : mutexB),
-            _alertPin(alertPin),
-            _sts3x_cmd_measure(SingleMode::SINGLE_NONE) {
+    Sts3x(TwoWire &interface, uint8_t address, pin_t alertPin)
+      : SensirionBase(interface, address),
+        mutex(address == ADDR_A ? mutexA : mutexB),
+        _alertPin(alertPin),
+        _sts3x_cmd_measure(SingleMode::SINGLE_NONE)
+    {
         pinMode(_alertPin, INPUT);
     }
 
@@ -136,8 +136,10 @@ public:
      *
      * @return true on success, false on failure
      */
-    bool singleShotMeasureAndRead(float& temperature,
-                    SingleMode s_setting = SingleMode::HIGH_NO_CLOCK_STRETCH);
+    bool singleShotMeasureAndRead(
+      float &temperature,
+      SingleMode s_setting = SingleMode::HIGH_NO_CLOCK_STRETCH
+    );
     /**
      * @brief Measure from an STS sensor
      *
@@ -151,9 +153,11 @@ public:
      *
      * @return true on success, false on failure
      */
-    bool measure(Mode mode = Mode::SINGLE_SHOT,
-                    SingleMode s_setting = SingleMode::HIGH_NO_CLOCK_STRETCH,
-                    PeriodicMode p_setting = PeriodicMode::PERIODIC_NONE);
+    bool measure(
+      Mode mode = Mode::SINGLE_SHOT,
+      SingleMode s_setting = SingleMode::HIGH_NO_CLOCK_STRETCH,
+      PeriodicMode p_setting = PeriodicMode::PERIODIC_NONE
+    );
 
     /**
      * @brief Read a started measurement from an STS sensor
@@ -164,7 +168,7 @@ public:
      *
      * @return true on success, false on failure
      */
-    bool singleShotRead(float& temperature);
+    bool singleShotRead(float &temperature);
 
     /**
      * @brief Read a started periodic mode measurement from an STS sensor.
@@ -178,7 +182,7 @@ public:
      *
      * @return true on success, false on failure
      */
-    bool periodicDataRead(Vector<float>& data);
+    bool periodicDataRead(Vector<float> &data);
 
     /**
      * @brief <enter a brief one sentence description>
@@ -201,7 +205,7 @@ public:
      *
      * @return true on success, false on failure
      */
-    bool getAlertThreshold(AlertThreshold limit, float& temperature) ;
+    bool getAlertThreshold(AlertThreshold limit, float &temperature);
 
     /**
      * @brief Read the STS status register
@@ -212,7 +216,7 @@ public:
      *
      * @return true on success, false on failure
      */
-    bool getStatus(uint16_t& status);
+    bool getStatus(uint16_t &status);
 
     /**
      * @brief CLEAR the STS status register
@@ -242,7 +246,6 @@ public:
     bool heaterOff();
 
 private:
-
     /**
      * @brief Returns the MPS word size expected in a single second for
      * reading all of the measuremnts in periodic mode
@@ -278,7 +281,7 @@ private:
 
     static RecursiveMutex mutexA;
     static RecursiveMutex mutexB;
-    RecursiveMutex& mutex;
+    RecursiveMutex &mutex;
     uint16_t _alertPin;
     uint16_t _sts3x_cmd_measure;
 };

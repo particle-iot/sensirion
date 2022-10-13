@@ -22,7 +22,9 @@
 
 class SensirionBase {
 protected:
-    SensirionBase(TwoWire& i2c, uint8_t address) : _i2c(i2c), _address(address) {};
+    SensirionBase(TwoWire &i2c, uint8_t address)
+      : _i2c(i2c),
+        _address(address) {};
 
     /**
      * @brief Initialize the interface
@@ -48,10 +50,12 @@ protected:
      *
      * @return true on success, false on failure
      */
-    bool readCmd(uint16_t command,
-                                    uint16_t* data_words,
-                                    uint16_t num_words,
-                                    uint32_t delay_us = 0);
+    bool readCmd(
+      uint16_t command,
+      uint16_t *data_words,
+      uint16_t num_words,
+      uint32_t delay_us = 0
+    );
 
     /**
      * @brief Used to write a command to a sensirion sensor
@@ -79,9 +83,9 @@ protected:
      *
      * @return <what does the function return (optional if void)>
      */
-    bool writeCmdWithArgs(uint16_t command,
-                                            const uint16_t* data_words,
-                                            uint16_t num_words);
+    bool writeCmdWithArgs(
+      uint16_t command, const uint16_t *data_words, uint16_t num_words
+    );
 
     /**
      * @brief Read a register from a sensirion device
@@ -96,7 +100,7 @@ protected:
      *
      * @return number of bytes read
      */
-    size_t readRegister(uint8_t* buf, size_t length);
+    size_t readRegister(uint8_t *buf, size_t length);
 
     /**
      * @brief Write a register of a sensirion device
@@ -110,7 +114,7 @@ protected:
      *
      * @return number of bytes written
      */
-    size_t writeRegister(const uint8_t* buf, size_t length);
+    size_t writeRegister(const uint8_t *buf, size_t length);
 
     /**
      * @brief Read words from a sensirion device
@@ -126,12 +130,12 @@ protected:
      *
      * @return true on success, false on failure
      */
-    bool readWords(uint16_t* data_words,
-                                    uint16_t num_words);
+    bool readWords(uint16_t *data_words, uint16_t num_words);
 
-    TwoWire& _i2c;
+    TwoWire &_i2c;
     uint8_t _address;
     static Logger driver_log;
+
 private:
     /**
      * @brief Read bytes given a buffer that represents words from a sensirion
@@ -148,8 +152,7 @@ private:
      *
      * @return true on success, false on failure
      */
-    bool readWordsAsBytes(uint8_t* data,
-                                            uint16_t num_words);
+    bool readWordsAsBytes(uint8_t *data, uint16_t num_words);
 
     /**
      * @brief Fill out command to be sent to a sensirion device
@@ -164,8 +167,9 @@ private:
      *
      * @return number of bytes filled in the buffer
      */
-    uint16_t fillCmdBytes(uint8_t* buf, uint16_t cmd,
-                                     const uint16_t* args, uint8_t num_args);
+    uint16_t fillCmdBytes(
+      uint8_t *buf, uint16_t cmd, const uint16_t *args, uint8_t num_args
+    );
 
     /**
      * @brief Generates a CRC
@@ -177,5 +181,5 @@ private:
      *
      * @return the generated CRC
      */
-    uint16_t generateCrc(const uint8_t* data, uint8_t len);
+    uint16_t generateCrc(const uint8_t *data, uint8_t len);
 };

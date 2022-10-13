@@ -75,52 +75,51 @@ constexpr int TEN_WORD_SIZE = 10;
 RecursiveMutex Sht3x::mutexA;
 RecursiveMutex Sht3x::mutexB;
 
-bool Sht3x::init() {
+bool Sht3x::init()
+{
     const std::lock_guard<RecursiveMutex> lg(mutex);
     return SensirionBase::init();
 }
 
-bool Sht3x::singleShotMeasureAndRead(float& temperature,
-                                                        float& humidity,
-                                                        SingleMode s_setting) {
+bool Sht3x::singleShotMeasureAndRead(
+  float &temperature, float &humidity, SingleMode s_setting
+)
+{
     bool ret = true;
     const std::lock_guard<RecursiveMutex> lg(mutex);
 
-    if (measure(Mode::SINGLE_SHOT, s_setting) ==
-                    true) {
+    if (measure(Mode::SINGLE_SHOT, s_setting) == true) {
         ret = singleShotRead(temperature, humidity);
-    }
-    else {
+    } else {
         driver_log.error("SHT-3x measure failed");
         ret = false;
     }
     return ret;
 }
 
-bool Sht3x::measure(Mode mode,
-                                        SingleMode s_setting,
-                                        PeriodicMode p_setting) {
+bool Sht3x::measure(Mode mode, SingleMode s_setting, PeriodicMode p_setting)
+{
     bool ret = true;
     const std::lock_guard<RecursiveMutex> lg(mutex);
 
     _sht3x_cmd_measure =
-        (mode == Mode::SINGLE_SHOT) ? (uint16_t)s_setting : (uint16_t)p_setting;
+      (mode == Mode::SINGLE_SHOT) ? (uint16_t)s_setting : (uint16_t)p_setting;
 
-    //break command to stop a previous periodic mode measure
+    // break command to stop a previous periodic mode measure
     ret = writeCmd(SHT3X_BREAK_CMD);
-    delay(1);//must delay 1ms to allow SHT3X to stop periodic data
+    delay(1); // must delay 1ms to allow SHT3X to stop periodic data
 
-    //do a check here if it happens to fail
-    //the break command when in periodic mode
-    if(ret) {
+    // do a check here if it happens to fail
+    // the break command when in periodic mode
+    if (ret) {
         ret = writeCmd(_sht3x_cmd_measure);
     }
 
     return ret;
 }
 
-bool Sht3x::singleShotRead(float& temperature,
-                                            float& humidity) {
+bool Sht3x::singleShotRead(float &temperature, float &humidity)
+{
     uint16_t words[2] {};
     const std::lock_guard<RecursiveMutex> lg(mutex);
 
@@ -132,66 +131,69 @@ bool Sht3x::singleShotRead(float& temperature,
     return ret;
 }
 
-bool Sht3x::periodicDataRead(Vector<std::pair<float, float>>& data) {
+bool Sht3x::periodicDataRead(Vector<std::pair<float, float>> &data)
+{
     const std::lock_guard<RecursiveMutex> lg(mutex);
 
     int num_of_words = _get_mps_size_to_words();
     Vector<uint16_t> words(num_of_words);
     bool ret = false;
 
-    if(writeCmd(STS3x_PERIODIC_READ_CMD)) {
+    if (writeCmd(STS3x_PERIODIC_READ_CMD)) {
         ret = readWords(words.data(), num_of_words);
     }
 
-    for(int i = 0; i < num_of_words; i+=2) {
+    for (int i = 0; i < num_of_words; i += 2) {
         data.append(std::make_pair(words.at(i), words.at(i + 1)));
     }
 
     return ret;
 }
 
-int Sht3x::_get_mps_size_to_words() {
+int Sht3x::_get_mps_size_to_words()
+{
     int size {};
 
-    switch(_sht3x_cmd_measure) {
+    switch (_sht3x_cmd_measure) {
         case HIGH_05_MPS:
         case MEDIUM_05_MPS:
         case LOW_05_MPS:
             size = ONE_WORD_SIZE;
-        break;
+            break;
 
         case HIGH_1_MPS:
         case MEDIUM_1_MPS:
         case LOW_1_MPS:
             size = TWO_WORD_SIZE;
-        break;
+            break;
         case HIGH_2_MPS:
         case MEDIUM_2_MPS:
         case LOW_2_MPS:
             size = FOUR_WORD_SIZE;
-        break;
+            break;
         case HIGH_4_MPS:
         case MEDIUM_4_MPS:
         case LOW_4_MPS:
             size = EIGHT_WORD_SIZE;
-        break;
+            break;
         case HIGH_10_MPS:
         case MEDIUM_10_MPS:
         case LOW_10_MPS:
             size = TEN_WORD_SIZE;
-        break;
+            break;
 
         default:
             size = 0;
-        break;
+            break;
     }
 
     return size;
 }
 
-bool Sht3x::setAlertThreshold(AlertThreshold limit,
-                                            float humidity,
-                                            float temperature) {
+bool Sht3x::setAlertThreshold(
+  AlertThreshold limit, float humidity, float temperature
+)
+{
     uint16_t limitVal = 0U;
     uint16_t write_cmd {};
     bool ret = true;
@@ -207,22 +209,22 @@ bool Sht3x::setAlertThreshold(AlertThreshold limit,
     switch (limit) {
         case AlertThreshold::SHT3X_HIALRT_SET:
             write_cmd = WRITE_HIALRT_LIM_SET;
-        break;
+            break;
 
         case AlertThreshold::SHT3X_HIALRT_CLR:
             write_cmd = WRITE_HIALRT_LIM_CLR;
-        break;
+            break;
 
         case AlertThreshold::SHT3X_LOALRT_CLR:
             write_cmd = WRITE_LOALRT_LIM_CLR;
-        break;
+            break;
 
         case AlertThreshold::SHT3X_LOALRT_SET:
             write_cmd = WRITE_LOALRT_LIM_SET;
-        break;
+            break;
     }
 
-    if(!writeCmdWithArgs(write_cmd, &limitVal, 1)) {
+    if (!writeCmdWithArgs(write_cmd, &limitVal, 1)) {
         ret = false;
         driver_log.info("failed to set alert limit");
     }
@@ -230,9 +232,10 @@ bool Sht3x::setAlertThreshold(AlertThreshold limit,
     return ret;
 }
 
-bool Sht3x::getAlertThreshold(AlertThreshold limit,
-                                            float& humidity,
-                                            float& temperature) {
+bool Sht3x::getAlertThreshold(
+  AlertThreshold limit, float &humidity, float &temperature
+)
+{
     uint16_t word;
     uint16_t read_cmd {};
     bool ret = true;
@@ -241,30 +244,29 @@ bool Sht3x::getAlertThreshold(AlertThreshold limit,
     switch (limit) {
         case AlertThreshold::SHT3X_HIALRT_SET:
             read_cmd = READ_HIALRT_LIM_SET;
-        break;
+            break;
 
         case AlertThreshold::SHT3X_HIALRT_CLR:
             read_cmd = READ_HIALRT_LIM_CLR;
-        break;
+            break;
 
         case AlertThreshold::SHT3X_LOALRT_CLR:
             read_cmd = READ_LOALRT_LIM_CLR;
-        break;
+            break;
 
         case AlertThreshold::SHT3X_LOALRT_SET:
             read_cmd = READ_LOALRT_LIM_SET;
-        break;
+            break;
     }
 
-    if(writeCmdWithArgs(read_cmd, &word, 1)) {
+    if (writeCmdWithArgs(read_cmd, &word, 1)) {
         /* convert threshold word to alert settings in 10*%RH & 10*°C */
         uint16_t rawRH = (word & SHT3X_HUMIDITY_LIMIT_MSK);
         uint16_t rawT = ((word & SHT3X_TEMPERATURE_LIMIT_MSK) << 7);
 
         humidity = _convert_raw_humidity(rawRH);
         temperature = _convert_raw_temp(rawT);
-    }
-    else {
+    } else {
         ret = false;
         driver_log.info("failed to get alert limit");
     }
@@ -272,44 +274,53 @@ bool Sht3x::getAlertThreshold(AlertThreshold limit,
     return ret;
 }
 
-bool Sht3x::getStatus(uint16_t& status) {
+bool Sht3x::getStatus(uint16_t &status)
+{
     const std::lock_guard<RecursiveMutex> lg(mutex);
-    return readCmd(SHT3X_CMD_READ_STATUS_REG,
-                &status,
-                1,
-                SHT3X_CMD_DURATION_USEC);
+    return readCmd(
+      SHT3X_CMD_READ_STATUS_REG, &status, 1, SHT3X_CMD_DURATION_USEC
+    );
 }
 
-bool Sht3x::clearStatus() {
+bool Sht3x::clearStatus()
+{
     const std::lock_guard<RecursiveMutex> lg(mutex);
     return writeCmd(SHT3X_CMD_CLR_STATUS_REG);
 }
 
-bool Sht3x::heaterOn() {
+bool Sht3x::heaterOn()
+{
     const std::lock_guard<RecursiveMutex> lg(mutex);
     return writeCmd(SHT3X_CMD_HEATER_ON);
 }
 
-bool Sht3x::heaterOff() {
+bool Sht3x::heaterOff()
+{
     const std::lock_guard<RecursiveMutex> lg(mutex);
     return writeCmd(SHT3X_CMD_HEATER_OFF);
 }
 
-float Sht3x::_convert_raw_temp(uint16_t temperature_raw) {
-    return (((RAW_TEMP_ADC_COUNT * (int32_t)temperature_raw) >>
-                DIVIDE_BY_POWER) - RAW_TEMP_CONST)/SENSIRION_SCALE;
+float Sht3x::_convert_raw_temp(uint16_t temperature_raw)
+{
+    return (((RAW_TEMP_ADC_COUNT * (int32_t)temperature_raw) >> DIVIDE_BY_POWER)
+            - RAW_TEMP_CONST)
+           / SENSIRION_SCALE;
 }
 
-float Sht3x::_convert_raw_humidity(uint16_t humidity_raw) {
-    return ((RAW_HUMIDITY_ADC_COUNT * (int32_t)humidity_raw) >>
-            DIVIDE_BY_POWER)/SENSIRION_SCALE;
+float Sht3x::_convert_raw_humidity(uint16_t humidity_raw)
+{
+    return ((RAW_HUMIDITY_ADC_COUNT * (int32_t)humidity_raw) >> DIVIDE_BY_POWER)
+           / SENSIRION_SCALE;
 }
 
-uint16_t Sht3x::_temperature_to_tick(int32_t temperature) {
-    return (uint16_t)((temperature * TEMP_MULTIPLY_CONSTANT +
-            TEMP_ADD_CONSTANT) >> DIVIDE_BY_TICK);
+uint16_t Sht3x::_temperature_to_tick(int32_t temperature)
+{
+    return (uint16_t
+    )((temperature * TEMP_MULTIPLY_CONSTANT + TEMP_ADD_CONSTANT)
+      >> DIVIDE_BY_TICK);
 }
 
-uint16_t Sht3x::_humidity_to_tick(int32_t humidity) {
+uint16_t Sht3x::_humidity_to_tick(int32_t humidity)
+{
     return (uint16_t)((humidity * HUMID_MULT_CONSTANT) >> DIVIDE_BY_TICK);
 }

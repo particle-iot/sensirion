@@ -19,7 +19,6 @@
 
 class Sht3x : public SensirionBase {
 public:
-
     static constexpr uint8_t ADDR_A {0x44u};
     static constexpr uint8_t ADDR_B {0x45u};
 
@@ -28,14 +27,14 @@ public:
         PERIODIC_DATA,
     };
 
-    enum AlertReadCmd: uint16_t {
+    enum AlertReadCmd : uint16_t {
         READ_HIALRT_LIM_SET = 0xE11F,
         READ_HIALRT_LIM_CLR = 0xE114,
         READ_LOALRT_LIM_CLR = 0xE109,
         READ_LOALRT_LIM_SET = 0xE102,
     };
 
-    enum AlertWriteCmd: uint16_t {
+    enum AlertWriteCmd : uint16_t {
         WRITE_HIALRT_LIM_SET = 0x611D,
         WRITE_HIALRT_LIM_CLR = 0x6116,
         WRITE_LOALRT_LIM_CLR = 0x610B,
@@ -78,11 +77,12 @@ public:
         SHT3X_LOALRT_SET,
     };
 
-    Sht3x(TwoWire& interface, uint8_t address, pin_t alertPin) :
-            SensirionBase(interface, address),
-            mutex(address == ADDR_A ? mutexA : mutexB),
-            _alertPin(alertPin),
-            _sht3x_cmd_measure(SingleMode::SINGLE_NONE) {
+    Sht3x(TwoWire &interface, uint8_t address, pin_t alertPin)
+      : SensirionBase(interface, address),
+        mutex(address == ADDR_A ? mutexA : mutexB),
+        _alertPin(alertPin),
+        _sht3x_cmd_measure(SingleMode::SINGLE_NONE)
+    {
         pinMode(_alertPin, INPUT);
     }
 
@@ -108,9 +108,11 @@ public:
      *
      * @return true on success, false on failure
      */
-    bool singleShotMeasureAndRead(float& temperature,
-                    float& humidity,
-                    SingleMode s_setting = SingleMode::HIGH_NO_CLOCK_STRETCH);
+    bool singleShotMeasureAndRead(
+      float &temperature,
+      float &humidity,
+      SingleMode s_setting = SingleMode::HIGH_NO_CLOCK_STRETCH
+    );
     /**
      * @brief Measure from an SHT sensor
      *
@@ -124,9 +126,11 @@ public:
      *
      * @return true on success, false on failure
      */
-    bool measure(Mode mode = Mode::SINGLE_SHOT,
-                    SingleMode s_setting = SingleMode::HIGH_NO_CLOCK_STRETCH,
-                    PeriodicMode p_setting = PeriodicMode::PERIODIC_NONE);
+    bool measure(
+      Mode mode = Mode::SINGLE_SHOT,
+      SingleMode s_setting = SingleMode::HIGH_NO_CLOCK_STRETCH,
+      PeriodicMode p_setting = PeriodicMode::PERIODIC_NONE
+    );
 
     /**
      * @brief Read a started single shot measurement from an SHT sensor
@@ -138,8 +142,7 @@ public:
      *
      * @return true on success, false on failure
      */
-    bool singleShotRead(float& temperature,
-                                            float& humidity);
+    bool singleShotRead(float &temperature, float &humidity);
 
     /**
      * @brief Read a started periodic mode measurement from an SHT sensor.
@@ -154,7 +157,7 @@ public:
      *
      * @return true on success, false on failure
      */
-    bool periodicDataRead(Vector<std::pair<float, float>>& data);
+    bool periodicDataRead(Vector<std::pair<float, float>> &data);
 
     /**
      * @brief Set thresholds for alert mode
@@ -167,9 +170,8 @@ public:
      *
      * @return true on success, false on failure
      */
-    bool setAlertThreshold(AlertThreshold limit,
-                                        float humidity,
-                                        float temperature);
+    bool
+    setAlertThreshold(AlertThreshold limit, float humidity, float temperature);
 
     /**
      * @brief Get tresholds for alert mode
@@ -182,9 +184,9 @@ public:
      *
      * @return true on success, false on failure
      */
-    bool getAlertThreshold(AlertThreshold limit,
-                                        float& humidity,
-                                        float& temperature);
+    bool getAlertThreshold(
+      AlertThreshold limit, float &humidity, float &temperature
+    );
 
     /**
      * @brief Read the SHT status register
@@ -195,7 +197,7 @@ public:
      *
      * @return true on success, false on failure
      */
-    bool getStatus(uint16_t& status);
+    bool getStatus(uint16_t &status);
 
     /**
      * @brief CLEAR the SHT status register
@@ -225,7 +227,6 @@ public:
     bool heaterOff();
 
 private:
-
     /**
      * @brief Returns the MPS word size expected in a single second for
      * reading all of the measuremnts in periodic mode
@@ -281,7 +282,7 @@ private:
 
     static RecursiveMutex mutexA;
     static RecursiveMutex mutexB;
-    RecursiveMutex& mutex;
+    RecursiveMutex &mutex;
     uint16_t _alertPin;
     uint16_t _sht3x_cmd_measure;
 };
