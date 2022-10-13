@@ -133,7 +133,6 @@ int Sts3x::_get_mps_size_to_words()
         case LOW_10_MPS:
             size = TEN_WORD_SIZE;
             break;
-
         default:
             size = 0;
             break;

@@ -15,6 +15,7 @@
  */
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 #include "Particle.h"
@@ -147,7 +148,7 @@ protected:
      *
      * @return number of bytes read
      */
-    size_t readRegister(std::uint8_t *buf, size_t length);
+    std::size_t readRegister(std::uint8_t *buf, std::size_t length);
 
     /**
      * @brief Write a register of a sensirion device
@@ -161,7 +162,7 @@ protected:
      *
      * @return number of bytes written
      */
-    size_t writeRegister(const std::uint8_t *buf, size_t length);
+    std::size_t writeRegister(const std::uint8_t *buf, std::size_t length);
 
     /**
      * @brief Read words from a sensirion device

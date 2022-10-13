@@ -82,7 +82,7 @@ bool SensirionBase::readCmd(
     std::uint8_t buf[SENSIRION_COMMAND_SIZE] {};
 
     fillCmdBytes(buf, command, NULL, 0);
-    size_t ret = writeRegister(buf, SENSIRION_COMMAND_SIZE);
+    std::size_t ret = writeRegister(buf, SENSIRION_COMMAND_SIZE);
 
     if (ret != SENSIRION_COMMAND_SIZE) {
         return false;
@@ -219,19 +219,20 @@ bool SensirionBase::readWords(
     return ret;
 }
 
-size_t SensirionBase::writeRegister(const std::uint8_t *buf, size_t length)
+std::size_t
+SensirionBase::writeRegister(const std::uint8_t *buf, std::size_t length)
 {
     _i2c.beginTransmission(_address);
-    size_t ret = _i2c.write(buf, length);
+    std::size_t ret = _i2c.write(buf, length);
     _i2c.endTransmission();
 
     return ret;
 }
 
-size_t SensirionBase::readRegister(std::uint8_t *buf, size_t length)
+std::size_t SensirionBase::readRegister(std::uint8_t *buf, std::size_t length)
 {
-    size_t readLength = (int)_i2c.requestFrom(_address, length);
-    size_t count = 0;
+    std::size_t readLength = _i2c.requestFrom(_address, length);
+    std::size_t count = 0;
     if (readLength != length) {
         _i2c.endTransmission();
     } else {

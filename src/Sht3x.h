@@ -193,46 +193,6 @@ private:
      */
     int _get_mps_size_to_words();
 
-    /**
-     * @brief Convert the raw temperature from an SHT sensor
-     *
-     * @details This is explained in the SHT data sheet, and is usually
-     * optimized for fixed point arithmetic
-     *
-     * @param[in] temperature_raw raw temp reading from SHT sensor
-     *
-     * @return the read and converted temperature in Celsius
-     */
-    float _convert_raw_temp(std::uint16_t temperature_raw);
-
-    /**
-     * @brief Convert the raw humidity from an SHT sensor
-     *
-     * @details This is explained in the SHT data sheet, and is usually
-     * optimized for fixed point arithmetic
-     *
-     * @param[in] humidity_raw raw humidity from SHT sensor
-     *
-     * @return the read and converted humidity in %
-     */
-    float _convert_raw_humidity(std::uint16_t humidity_raw);
-
-    /**
-     * @brief converts temperature to ADC ticks
-     *
-     * @param temperature temperature value in T°C*1000
-     * @param tick sensor ADC ticks
-     */
-    std::uint16_t _temperature_to_tick(std::int32_t temperature);
-
-    /**
-     * @brief converts humidity to ADC ticks
-     *
-     * @param humidity humidity value in %*1000
-     * @param tick sensor ADC ticks
-     */
-    std::uint16_t _humidity_to_tick(std::int32_t humidity);
-
     static RecursiveMutex mutexA;
     static RecursiveMutex mutexB;
     std::uint16_t _sht3x_cmd_measure;
