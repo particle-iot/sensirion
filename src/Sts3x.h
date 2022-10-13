@@ -44,33 +44,35 @@
  */
 #pragma once
 
+#include <cstdint>
+
 #include "SensirionBase.h"
 
 class Sts3x : public SensirionBase {
 public:
-    static constexpr uint8_t ADDR_A {0x4au};
-    static constexpr uint8_t ADDR_B {0x4bu};
+    static constexpr std::uint8_t ADDR_A {0x4au};
+    static constexpr std::uint8_t ADDR_B {0x4bu};
 
     enum class Mode {
         SINGLE_SHOT,
         PERIODIC_DATA,
     };
 
-    enum AlertReadCmd : uint16_t {
+    enum AlertReadCmd : std::uint16_t {
         READ_HIALRT_LIM_SET = 0xE11F,
         READ_HIALRT_LIM_CLR = 0xE114,
         READ_LOALRT_LIM_CLR = 0xE109,
         READ_LOALRT_LIM_SET = 0xE102,
     };
 
-    enum AlertWriteCmd : uint16_t {
+    enum AlertWriteCmd : std::uint16_t {
         WRITE_HIALRT_LIM_SET = 0x611D,
         WRITE_HIALRT_LIM_CLR = 0x6116,
         WRITE_LOALRT_LIM_CLR = 0x610B,
         WRITE_LOALRT_LIM_SET = 0x6100,
     };
 
-    enum SingleMode : uint16_t {
+    enum SingleMode : std::uint16_t {
         HIGH_CLOCK_STRETCH = 0x2C06,
         MEDIUM_CLOCK_STRETCH = 0x2C0D,
         LOW_CLOCK_STRETCH = 0x2C10,
@@ -80,7 +82,7 @@ public:
         SINGLE_NONE = 0xFFFF,
     };
 
-    enum PeriodicMode : uint16_t {
+    enum PeriodicMode : std::uint16_t {
         HIGH_05_MPS = 0x2032,
         MEDIUM_05_MPS = 0x2024,
         LOW_05_MPS = 0x202F,
@@ -106,7 +108,7 @@ public:
         STS3X_LOALRT_SET,
     };
 
-    Sts3x(TwoWire &interface, uint8_t address, pin_t alertPin)
+    Sts3x(TwoWire &interface, std::uint8_t address, pin_t alertPin)
       : SensirionBase(interface, address),
         mutex(address == ADDR_A ? mutexA : mutexB),
         _alertPin(alertPin),
@@ -216,7 +218,7 @@ public:
      *
      * @return true on success, false on failure
      */
-    bool getStatus(uint16_t &status);
+    bool getStatus(std::uint16_t &status);
 
     /**
      * @brief CLEAR the STS status register
@@ -269,7 +271,7 @@ private:
      *
      * @return the read and converted temperature in Celsius
      */
-    float _convert_raw_temp(uint16_t temperature_raw);
+    float _convert_raw_temp(std::uint16_t temperature_raw);
 
     /**
      * @brief converts temperature to ADC ticks
@@ -277,11 +279,11 @@ private:
      * @param temperature temperature value in T°C*1000
      * @param tick sensor ADC ticks
      */
-    uint16_t _temperature_to_tick(int32_t temperature);
+    std::uint16_t _temperature_to_tick(int32_t temperature);
 
     static RecursiveMutex mutexA;
     static RecursiveMutex mutexB;
     RecursiveMutex &mutex;
-    uint16_t _alertPin;
-    uint16_t _sts3x_cmd_measure;
+    std::uint16_t _alertPin;
+    std::uint16_t _sts3x_cmd_measure;
 };

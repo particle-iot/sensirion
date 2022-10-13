@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#include <cstdint>
+#include <mutex>
+
 #include "Sts3x.h"
 
 constexpr uint16_t STS3x_PERIODIC_READ_CMD = 0xE000;
@@ -259,12 +262,13 @@ bool Sts3x::heaterOff()
 
 float Sts3x::_convert_raw_temp(uint16_t temperature_raw)
 {
-    return (((RAW_TEMP_ADC_COUNT * (int32_t)temperature_raw) >> DIVIDE_BY_POWER)
+    return (((RAW_TEMP_ADC_COUNT * (std::int32_t)temperature_raw)
+             >> DIVIDE_BY_POWER)
             - RAW_TEMP_CONST)
            / SENSIRION_SCALE;
 }
 
-uint16_t Sts3x::_temperature_to_tick(int32_t temperature)
+uint16_t Sts3x::_temperature_to_tick(std::int32_t temperature)
 {
     return (uint16_t
     )((temperature * TEMP_MULTIPLY_CONSTANT + TEMP_ADD_CONSTANT)

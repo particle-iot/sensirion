@@ -43,18 +43,21 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <cstdint>
+#include <mutex>
+
 #include "Sht3x.h"
 
-constexpr uint16_t STS3x_PERIODIC_READ_CMD = 0xE000;
-constexpr uint16_t SHT3X_BREAK_CMD = 0x3093;
-constexpr uint16_t SHT3X_CMD_READ_STATUS_REG = 0xF32D;
-constexpr uint16_t SHT3X_CMD_CLR_STATUS_REG = 0x3041;
-constexpr uint16_t SHT3X_CMD_HEATER_ON = 0x306D;
-constexpr uint16_t SHT3X_CMD_HEATER_OFF = 0x3066;
+constexpr std::uint16_t STS3x_PERIODIC_READ_CMD = 0xE000;
+constexpr std::uint16_t SHT3X_BREAK_CMD = 0x3093;
+constexpr std::uint16_t SHT3X_CMD_READ_STATUS_REG = 0xF32D;
+constexpr std::uint16_t SHT3X_CMD_CLR_STATUS_REG = 0x3041;
+constexpr std::uint16_t SHT3X_CMD_HEATER_ON = 0x306D;
+constexpr std::uint16_t SHT3X_CMD_HEATER_OFF = 0x3066;
 
-constexpr uint16_t SHT3X_CMD_DURATION_USEC = 1000;
-constexpr uint16_t SHT3X_HUMIDITY_LIMIT_MSK = 0xFE00U;
-constexpr uint16_t SHT3X_TEMPERATURE_LIMIT_MSK = 0x01FFU;
+constexpr std::uint16_t SHT3X_CMD_DURATION_USEC = 1000;
+constexpr std::uint16_t SHT3X_HUMIDITY_LIMIT_MSK = 0xFE00U;
+constexpr std::uint16_t SHT3X_TEMPERATURE_LIMIT_MSK = 0x01FFU;
 
 constexpr unsigned int RAW_TEMP_ADC_COUNT = 21875;
 constexpr unsigned int RAW_HUMIDITY_ADC_COUNT = 12500;
@@ -102,8 +105,8 @@ bool Sht3x::measure(Mode mode, SingleMode s_setting, PeriodicMode p_setting)
     bool ret = true;
     const std::lock_guard<RecursiveMutex> lg(mutex);
 
-    _sht3x_cmd_measure =
-      (mode == Mode::SINGLE_SHOT) ? (uint16_t)s_setting : (uint16_t)p_setting;
+    _sht3x_cmd_measure = (mode == Mode::SINGLE_SHOT) ? (std::uint16_t)s_setting
+                                                     : (std::uint16_t)p_setting;
 
     // break command to stop a previous periodic mode measure
     ret = writeCmd(SHT3X_BREAK_CMD);
@@ -120,7 +123,7 @@ bool Sht3x::measure(Mode mode, SingleMode s_setting, PeriodicMode p_setting)
 
 bool Sht3x::singleShotRead(float &temperature, float &humidity)
 {
-    uint16_t words[2] {};
+    std::uint16_t words[2] {};
     const std::lock_guard<RecursiveMutex> lg(mutex);
 
     bool ret = readWords(words, 2);
@@ -136,7 +139,7 @@ bool Sht3x::periodicDataRead(Vector<std::pair<float, float>> &data)
     const std::lock_guard<RecursiveMutex> lg(mutex);
 
     int num_of_words = _get_mps_size_to_words();
-    Vector<uint16_t> words(num_of_words);
+    Vector<std::uint16_t> words(num_of_words);
     bool ret = false;
 
     if (writeCmd(STS3x_PERIODIC_READ_CMD)) {
@@ -194,13 +197,13 @@ bool Sht3x::setAlertThreshold(
   AlertThreshold limit, float humidity, float temperature
 )
 {
-    uint16_t limitVal = 0U;
-    uint16_t write_cmd {};
+    std::uint16_t limitVal = 0U;
+    std::uint16_t write_cmd {};
     bool ret = true;
     const std::lock_guard<RecursiveMutex> lg(mutex);
 
-    uint16_t rawT = _temperature_to_tick(temperature * SENSIRION_SCALE);
-    uint16_t rawRH = _humidity_to_tick(humidity * SENSIRION_SCALE);
+    std::uint16_t rawT = _temperature_to_tick(temperature * SENSIRION_SCALE);
+    std::uint16_t rawRH = _humidity_to_tick(humidity * SENSIRION_SCALE);
 
     /* convert inputs to alert threshold word */
     limitVal = (rawRH & SHT3X_HUMIDITY_LIMIT_MSK);
@@ -236,8 +239,8 @@ bool Sht3x::getAlertThreshold(
   AlertThreshold limit, float &humidity, float &temperature
 )
 {
-    uint16_t word;
-    uint16_t read_cmd {};
+    std::uint16_t word;
+    std::uint16_t read_cmd {};
     bool ret = true;
     const std::lock_guard<RecursiveMutex> lg(mutex);
 
@@ -261,8 +264,8 @@ bool Sht3x::getAlertThreshold(
 
     if (writeCmdWithArgs(read_cmd, &word, 1)) {
         /* convert threshold word to alert settings in 10*%RH & 10*°C */
-        uint16_t rawRH = (word & SHT3X_HUMIDITY_LIMIT_MSK);
-        uint16_t rawT = ((word & SHT3X_TEMPERATURE_LIMIT_MSK) << 7);
+        std::uint16_t rawRH = (word & SHT3X_HUMIDITY_LIMIT_MSK);
+        std::uint16_t rawT = ((word & SHT3X_TEMPERATURE_LIMIT_MSK) << 7);
 
         humidity = _convert_raw_humidity(rawRH);
         temperature = _convert_raw_temp(rawT);
@@ -274,7 +277,7 @@ bool Sht3x::getAlertThreshold(
     return ret;
 }
 
-bool Sht3x::getStatus(uint16_t &status)
+bool Sht3x::getStatus(std::uint16_t &status)
 {
     const std::lock_guard<RecursiveMutex> lg(mutex);
     return readCmd(
@@ -300,27 +303,29 @@ bool Sht3x::heaterOff()
     return writeCmd(SHT3X_CMD_HEATER_OFF);
 }
 
-float Sht3x::_convert_raw_temp(uint16_t temperature_raw)
+float Sht3x::_convert_raw_temp(std::uint16_t temperature_raw)
 {
-    return (((RAW_TEMP_ADC_COUNT * (int32_t)temperature_raw) >> DIVIDE_BY_POWER)
+    return (((RAW_TEMP_ADC_COUNT * (std::int32_t)temperature_raw)
+             >> DIVIDE_BY_POWER)
             - RAW_TEMP_CONST)
            / SENSIRION_SCALE;
 }
 
-float Sht3x::_convert_raw_humidity(uint16_t humidity_raw)
+float Sht3x::_convert_raw_humidity(std::uint16_t humidity_raw)
 {
-    return ((RAW_HUMIDITY_ADC_COUNT * (int32_t)humidity_raw) >> DIVIDE_BY_POWER)
+    return ((RAW_HUMIDITY_ADC_COUNT * (std::int32_t)humidity_raw)
+            >> DIVIDE_BY_POWER)
            / SENSIRION_SCALE;
 }
 
-uint16_t Sht3x::_temperature_to_tick(int32_t temperature)
+std::uint16_t Sht3x::_temperature_to_tick(std::int32_t temperature)
 {
-    return (uint16_t
+    return (std::uint16_t
     )((temperature * TEMP_MULTIPLY_CONSTANT + TEMP_ADD_CONSTANT)
       >> DIVIDE_BY_TICK);
 }
 
-uint16_t Sht3x::_humidity_to_tick(int32_t humidity)
+std::uint16_t Sht3x::_humidity_to_tick(std::int32_t humidity)
 {
-    return (uint16_t)((humidity * HUMID_MULT_CONSTANT) >> DIVIDE_BY_TICK);
+    return (std::uint16_t)((humidity * HUMID_MULT_CONSTANT) >> DIVIDE_BY_TICK);
 }

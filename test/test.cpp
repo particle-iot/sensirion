@@ -16,6 +16,8 @@
 
 #define CATCH_CONFIG_MAIN
 
+#include <utility>
+
 #include "Particle.h"
 #include "catch.h"
 

@@ -43,6 +43,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <cstdint>
+
 #include "SensirionBase.h"
 
 constexpr unsigned int CRC8_POLYNOMIAL = 0x31;
@@ -66,10 +68,13 @@ bool SensirionBase::init()
 }
 
 bool SensirionBase::readCmd(
-  uint16_t command, uint16_t *data_words, uint16_t num_words, uint32_t delay_us
+  std::uint16_t command,
+  std::uint16_t *data_words,
+  std::uint16_t num_words,
+  std::uint32_t delay_us
 )
 {
-    uint8_t buf[SENSIRION_COMMAND_SIZE] {};
+    std::uint8_t buf[SENSIRION_COMMAND_SIZE] {};
 
     fillCmdBytes(buf, command, NULL, 0);
     size_t ret = writeRegister(buf, SENSIRION_COMMAND_SIZE);
@@ -85,9 +90,9 @@ bool SensirionBase::readCmd(
     return readWords(data_words, num_words);
 }
 
-bool SensirionBase::writeCmd(uint16_t command)
+bool SensirionBase::writeCmd(std::uint16_t command)
 {
-    uint8_t buf[SENSIRION_COMMAND_SIZE];
+    std::uint8_t buf[SENSIRION_COMMAND_SIZE];
     bool ret = true;
 
     fillCmdBytes(buf, command, NULL, 0);
@@ -99,13 +104,15 @@ bool SensirionBase::writeCmd(uint16_t command)
 }
 
 bool SensirionBase::writeCmdWithArgs(
-  uint16_t command, const uint16_t *data_words, uint16_t num_words
+  std::uint16_t command,
+  const std::uint16_t *data_words,
+  std::uint16_t num_words
 )
 {
-    uint8_t buf[SENSIRION_MAX_BUFFER_WORDS];
+    std::uint8_t buf[SENSIRION_MAX_BUFFER_WORDS];
     bool ret = true;
 
-    uint16_t buf_size = fillCmdBytes(buf, command, data_words, num_words);
+    std::uint16_t buf_size = fillCmdBytes(buf, command, data_words, num_words);
 
     if (writeRegister(buf, buf_size) != buf_size) {
         ret = false;
@@ -114,11 +121,12 @@ bool SensirionBase::writeCmdWithArgs(
     return ret;
 }
 
-uint16_t SensirionBase::generateCrc(const uint8_t *data, uint8_t len)
+std::uint16_t
+SensirionBase::generateCrc(const std::uint8_t *data, std::uint8_t len)
 {
-    uint16_t current_byte;
-    uint8_t crc = CRC8_INIT;
-    uint8_t crc_bit;
+    std::uint16_t current_byte;
+    std::uint8_t crc = CRC8_INIT;
+    std::uint8_t crc_bit;
 
     /* calculates 8-Bit checksum with given polynomial */
     for (current_byte = 0; current_byte < len; ++current_byte) {
@@ -134,32 +142,37 @@ uint16_t SensirionBase::generateCrc(const uint8_t *data, uint8_t len)
     return crc;
 }
 
-uint16_t SensirionBase::fillCmdBytes(
-  uint8_t *buf, uint16_t cmd, const uint16_t *args, uint8_t num_args
+std::uint16_t SensirionBase::fillCmdBytes(
+  std::uint8_t *buf,
+  std::uint16_t cmd,
+  const std::uint16_t *args,
+  std::uint8_t num_args
 )
 {
-    uint8_t crc;
-    uint16_t idx = 0;
+    std::uint8_t crc;
+    std::uint16_t idx = 0;
 
-    buf[idx++] = (uint8_t)((cmd & 0xFF00) >> 8);
-    buf[idx++] = (uint8_t)((cmd & 0x00FF) >> 0);
+    buf[idx++] = (std::uint8_t)((cmd & 0xFF00) >> 8);
+    buf[idx++] = (std::uint8_t)((cmd & 0x00FF) >> 0);
 
     for (int i = 0; i < num_args; ++i) {
-        buf[idx++] = (uint8_t)((args[i] & 0xFF00) >> 8);
-        buf[idx++] = (uint8_t)((args[i] & 0x00FF) >> 0);
+        buf[idx++] = (std::uint8_t)((args[i] & 0xFF00) >> 8);
+        buf[idx++] = (std::uint8_t)((args[i] & 0x00FF) >> 0);
 
-        crc = generateCrc((uint8_t *)&buf[idx - 2], SENSIRION_WORD_SIZE);
+        crc = generateCrc((std::uint8_t *)&buf[idx - 2], SENSIRION_WORD_SIZE);
         buf[idx++] = crc;
     }
     return idx;
 }
 
-bool SensirionBase::readWordsAsBytes(uint8_t *data, uint16_t num_words)
+bool SensirionBase::readWordsAsBytes(
+  std::uint8_t *data, std::uint16_t num_words
+)
 {
     bool ret = true; // assume success
     int size = num_words * (SENSIRION_WORD_SIZE + CRC8_LEN);
-    uint16_t word_buf[SENSIRION_MAX_BUFFER_WORDS] {};
-    uint8_t *const buf8 = (uint8_t *)word_buf;
+    std::uint16_t word_buf[SENSIRION_MAX_BUFFER_WORDS] {};
+    std::uint8_t *const buf8 = (std::uint8_t *)word_buf;
 
     if (!readRegister(buf8, size)) {
         ret = false;
@@ -181,16 +194,18 @@ bool SensirionBase::readWordsAsBytes(uint8_t *data, uint16_t num_words)
     return ret;
 }
 
-bool SensirionBase::readWords(uint16_t *data_words, uint16_t num_words)
+bool SensirionBase::readWords(
+  std::uint16_t *data_words, std::uint16_t num_words
+)
 {
-    const uint8_t *word_bytes;
+    const std::uint8_t *word_bytes;
 
-    bool ret = readWordsAsBytes((uint8_t *)data_words, num_words);
+    bool ret = readWordsAsBytes((std::uint8_t *)data_words, num_words);
 
     if (ret) {
         for (int i = 0; i < num_words; ++i) {
-            word_bytes = (uint8_t *)&data_words[i];
-            data_words[i] = ((uint16_t)word_bytes[0] << 8) | word_bytes[1];
+            word_bytes = (std::uint8_t *)&data_words[i];
+            data_words[i] = ((std::uint16_t)word_bytes[0] << 8) | word_bytes[1];
         }
     } else {
         driver_log.error("read words failed");
@@ -199,7 +214,7 @@ bool SensirionBase::readWords(uint16_t *data_words, uint16_t num_words)
     return ret;
 }
 
-size_t SensirionBase::writeRegister(const uint8_t *buf, size_t length)
+size_t SensirionBase::writeRegister(const std::uint8_t *buf, size_t length)
 {
     _i2c.beginTransmission(_address);
     size_t ret = _i2c.write(buf, length);
@@ -208,7 +223,7 @@ size_t SensirionBase::writeRegister(const uint8_t *buf, size_t length)
     return ret;
 }
 
-size_t SensirionBase::readRegister(uint8_t *buf, size_t length)
+size_t SensirionBase::readRegister(std::uint8_t *buf, size_t length)
 {
     size_t readLength = (int)_i2c.requestFrom(_address, length);
     size_t count = 0;

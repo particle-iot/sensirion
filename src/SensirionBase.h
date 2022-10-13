@@ -15,6 +15,8 @@
  */
 #pragma once
 
+#include <cstdint>
+
 #include "Particle.h"
 
 #define SENSIRION_WORD_SIZE 2
@@ -22,7 +24,7 @@
 
 class SensirionBase {
 protected:
-    SensirionBase(TwoWire &i2c, uint8_t address)
+    SensirionBase(TwoWire &i2c, std::uint8_t address)
       : _i2c(i2c),
         _address(address) {};
 
@@ -51,10 +53,10 @@ protected:
      * @return true on success, false on failure
      */
     bool readCmd(
-      uint16_t command,
-      uint16_t *data_words,
-      uint16_t num_words,
-      uint32_t delay_us = 0
+      std::uint16_t command,
+      std::uint16_t *data_words,
+      std::uint16_t num_words,
+      std::uint32_t delay_us = 0
     );
 
     /**
@@ -67,7 +69,7 @@ protected:
      *
      * @return true on success, false on failure
      */
-    bool writeCmd(uint16_t command);
+    bool writeCmd(std::uint16_t command);
 
     /**
      * @brief Used to write a command with multiple arguments to a sensirion
@@ -84,7 +86,9 @@ protected:
      * @return <what does the function return (optional if void)>
      */
     bool writeCmdWithArgs(
-      uint16_t command, const uint16_t *data_words, uint16_t num_words
+      std::uint16_t command,
+      const std::uint16_t *data_words,
+      std::uint16_t num_words
     );
 
     /**
@@ -100,7 +104,7 @@ protected:
      *
      * @return number of bytes read
      */
-    size_t readRegister(uint8_t *buf, size_t length);
+    size_t readRegister(std::uint8_t *buf, size_t length);
 
     /**
      * @brief Write a register of a sensirion device
@@ -114,7 +118,7 @@ protected:
      *
      * @return number of bytes written
      */
-    size_t writeRegister(const uint8_t *buf, size_t length);
+    size_t writeRegister(const std::uint8_t *buf, size_t length);
 
     /**
      * @brief Read words from a sensirion device
@@ -130,10 +134,10 @@ protected:
      *
      * @return true on success, false on failure
      */
-    bool readWords(uint16_t *data_words, uint16_t num_words);
+    bool readWords(std::uint16_t *data_words, std::uint16_t num_words);
 
     TwoWire &_i2c;
-    uint8_t _address;
+    std::uint8_t _address;
     static Logger driver_log;
 
 private:
@@ -142,7 +146,7 @@ private:
      * device
      *
      * @details This is called from the readWords() function, and will take the
-     * buffer of uint16_t elements, and read them out byte by byte from the
+     * buffer of std::uint16_t elements, and read them out byte by byte from the
      * device. This will still check if each word's crc matches the
      * calculated crc for that word.
      *
@@ -152,7 +156,7 @@ private:
      *
      * @return true on success, false on failure
      */
-    bool readWordsAsBytes(uint8_t *data, uint16_t num_words);
+    bool readWordsAsBytes(std::uint8_t *data, std::uint16_t num_words);
 
     /**
      * @brief Fill out command to be sent to a sensirion device
@@ -167,8 +171,11 @@ private:
      *
      * @return number of bytes filled in the buffer
      */
-    uint16_t fillCmdBytes(
-      uint8_t *buf, uint16_t cmd, const uint16_t *args, uint8_t num_args
+    std::uint16_t fillCmdBytes(
+      std::uint8_t *buf,
+      std::uint16_t cmd,
+      const std::uint16_t *args,
+      std::uint8_t num_args
     );
 
     /**
@@ -181,5 +188,5 @@ private:
      *
      * @return the generated CRC
      */
-    uint16_t generateCrc(const uint8_t *data, uint8_t len);
+    std::uint16_t generateCrc(const std::uint8_t *data, std::uint8_t len);
 };
