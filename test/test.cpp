@@ -16,6 +16,7 @@
 
 #define CATCH_CONFIG_MAIN
 
+#include <cmath>
 #include <utility>
 
 #include "Particle.h"
@@ -127,6 +128,8 @@ TEST_CASE("SHT tests")
     Wire.num_bytes_to_read = 6;
     Wire.data_read = singleshot_pass_data;
     REQUIRE(sht->singleShotMeasureAndRead(temp, humidity) == true);
+    REQUIRE(std::fabs(temp - 21.398f) < 3e-3f);
+    REQUIRE(std::fabs(humidity - 45.692f) < 3e-3f);
 
     // setup the periodicDataRead failure 1
     sht->measure(
@@ -269,6 +272,7 @@ TEST_CASE("STS tests")
     Wire.num_bytes_to_read = 3;
     Wire.data_read = singleshot_pass_data;
     REQUIRE(sts->singleShotMeasureAndRead(temp) == true);
+    REQUIRE(std::fabs(temp - 21.149f) < 3e-3f);
 
     // setup the periodicDataRead failure 1
     sts->measure(

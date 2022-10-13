@@ -261,26 +261,6 @@ private:
      */
     int _get_mps_size_to_words();
 
-    /**
-     * @brief Convert the raw temperature from an STS sensor
-     *
-     * @details This is explained in the STS data sheet, and is usually
-     * optimized for fixed point arithmetic
-     *
-     * @param[in] temperature_raw raw temp reading from STS sensor
-     *
-     * @return the read and converted temperature in Celsius
-     */
-    float _convert_raw_temp(std::uint16_t temperature_raw);
-
-    /**
-     * @brief converts temperature to ADC ticks
-     *
-     * @param temperature temperature value in T°C*1000
-     * @param tick sensor ADC ticks
-     */
-    std::uint16_t _temperature_to_tick(int32_t temperature);
-
     static RecursiveMutex mutexA;
     static RecursiveMutex mutexB;
     RecursiveMutex &mutex;
