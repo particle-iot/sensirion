@@ -23,11 +23,7 @@
 #define SENSIRION_NUM_WORDS(x) (sizeof(x) / SENSIRION_WORD_SIZE)
 
 class SensirionBase {
-protected:
-    SensirionBase(TwoWire &i2c, std::uint8_t address)
-      : _i2c(i2c),
-        _address(address) {};
-
+public:
     /**
      * @brief Initialize the interface
      *
@@ -37,6 +33,53 @@ protected:
      * @return true on success, false on failure
      */
     bool init();
+
+    /**
+     * @brief Read the status register
+     *
+     * @details Sends a command to read the SHT status register
+     *
+     * @param[out] status read from the register
+     *
+     * @return true on success, false on failure
+     */
+    bool getStatus(std::uint16_t &status);
+
+    /**
+     * @brief CLEAR the status register
+     *
+     * @details Sends a command to clear the SHT status register
+     *
+     * @return true on success, false on failure
+     */
+    bool clearStatus();
+
+    /**
+     * @brief Turns the heater on to see plausability of values
+     *
+     * @details Sends the heater on command
+     *
+     * @return true on success, false on failure
+     */
+    bool heaterOn();
+
+    /**
+     * @brief Turns the heater off
+     *
+     * @details Sends the heater off command
+     *
+     * @return true on success, false on failure
+     */
+    bool heaterOff();
+
+protected:
+    SensirionBase(
+      TwoWire &i2c, std::uint8_t address, pin_t alert_pin, RecursiveMutex &mutex
+    )
+      : _i2c(i2c),
+        _address(address),
+        _alertPin(alert_pin),
+        _mutex(mutex) {};
 
     /**
      * @brief Used to read a sensirion sensor
@@ -138,6 +181,8 @@ protected:
 
     TwoWire &_i2c;
     std::uint8_t _address;
+    std::uint16_t _alertPin;
+    RecursiveMutex &_mutex;
     static Logger driver_log;
 
     static constexpr float convert_raw_temp(std::uint16_t temperature_raw)

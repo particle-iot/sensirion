@@ -108,24 +108,12 @@ public:
         STS3X_LOALRT_SET,
     };
 
-    Sts3x(TwoWire &interface, std::uint8_t address, pin_t alertPin)
-      : SensirionBase(interface, address),
-        mutex(address == ADDR_A ? mutexA : mutexB),
-        _alertPin(alertPin),
+    Sts3x(TwoWire &interface, std::uint8_t address, pin_t alert_pin)
+      : SensirionBase(
+        interface, address, alert_pin, address == ADDR_A ? mutexA : mutexB
+      ),
         _sts3x_cmd_measure(SingleMode::SINGLE_NONE)
-    {
-        pinMode(_alertPin, INPUT);
-    }
-
-    /**
-     * @brief Initialize the interface
-     *
-     * @details Attempts to begin i2c transmission of the sensor to
-     * validate the sensor can communicate
-     *
-     * @return true on success, false on failure
-     */
-    bool init();
+    {}
 
     /**
      * @brief Measure and read from an STS sensor the temperature and humidity
@@ -209,44 +197,6 @@ public:
      */
     bool getAlertThreshold(AlertThreshold limit, float &temperature);
 
-    /**
-     * @brief Read the STS status register
-     *
-     * @details Sends a command to read the STS status register
-     *
-     * @param[out] status read from the register
-     *
-     * @return true on success, false on failure
-     */
-    bool getStatus(std::uint16_t &status);
-
-    /**
-     * @brief CLEAR the STS status register
-     *
-     * @details Sends a command to clear the STS status register
-     *
-     * @return true on success, false on failure
-     */
-    bool clearStatus();
-
-    /**
-     * @brief Turns the heater on the STS to see plausability of values
-     *
-     * @details Sends the heater on command
-     *
-     * @return true on success, false on failure
-     */
-    bool heaterOn();
-
-    /**
-     * @brief Turns the heater on the STS off
-     *
-     * @details Sends the heater off command
-     *
-     * @return true on success, false on failure
-     */
-    bool heaterOff();
-
 private:
     /**
      * @brief Returns the MPS word size expected in a single second for
@@ -263,7 +213,5 @@ private:
 
     static RecursiveMutex mutexA;
     static RecursiveMutex mutexB;
-    RecursiveMutex &mutex;
-    std::uint16_t _alertPin;
     std::uint16_t _sts3x_cmd_measure;
 };

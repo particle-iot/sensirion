@@ -21,10 +21,6 @@
 
 constexpr std::uint16_t STS3x_PERIODIC_READ_CMD = 0xE000;
 constexpr std::uint16_t STS3X_BREAK_CMD = 0x3093;
-constexpr std::uint16_t STS3X_CMD_READ_STATUS_REG = 0xF32D;
-constexpr std::uint16_t STS3X_CMD_CLR_STATUS_REG = 0x3041;
-constexpr std::uint16_t STS3X_CMD_HEATER_ON = 0x306D;
-constexpr std::uint16_t STS3X_CMD_HEATER_OFF = 0x3066;
 
 constexpr std::uint16_t STS3X_CMD_DURATION_USEC = 1000;
 constexpr std::uint16_t STS3X_TEMPERATURE_LIMIT_MSK = 0x01FFU;
@@ -40,16 +36,10 @@ constexpr int TEN_WORD_SIZE = 10;
 RecursiveMutex Sts3x::mutexA;
 RecursiveMutex Sts3x::mutexB;
 
-bool Sts3x::init()
-{
-    const std::lock_guard<RecursiveMutex> lg(mutex);
-    return SensirionBase::init();
-}
-
 bool Sts3x::singleShotMeasureAndRead(float &temperature, SingleMode s_setting)
 {
     bool ret = true;
-    const std::lock_guard<RecursiveMutex> lg(mutex);
+    const std::lock_guard<RecursiveMutex> lg(_mutex);
 
     if (measure(Mode::SINGLE_SHOT, s_setting) == true) {
         ret = singleShotRead(temperature);
@@ -63,7 +53,7 @@ bool Sts3x::singleShotMeasureAndRead(float &temperature, SingleMode s_setting)
 bool Sts3x::measure(Mode mode, SingleMode s_setting, PeriodicMode p_setting)
 {
     bool ret = true;
-    const std::lock_guard<RecursiveMutex> lg(mutex);
+    const std::lock_guard<RecursiveMutex> lg(_mutex);
 
     _sts3x_cmd_measure = (mode == Mode::SINGLE_SHOT) ? (std::uint16_t)s_setting
                                                      : (std::uint16_t)p_setting;
@@ -84,7 +74,7 @@ bool Sts3x::measure(Mode mode, SingleMode s_setting, PeriodicMode p_setting)
 bool Sts3x::singleShotRead(float &temperature)
 {
     std::uint16_t raw_temp;
-    const std::lock_guard<RecursiveMutex> lg(mutex);
+    const std::lock_guard<RecursiveMutex> lg(_mutex);
 
     bool ret = readWords(&raw_temp, 1);
 
@@ -95,7 +85,7 @@ bool Sts3x::singleShotRead(float &temperature)
 
 bool Sts3x::periodicDataRead(Vector<float> &data)
 {
-    const std::lock_guard<RecursiveMutex> lg(mutex);
+    const std::lock_guard<RecursiveMutex> lg(_mutex);
     int num_of_words = _get_mps_size_to_words();
     Vector<std::uint16_t> words(num_of_words);
     bool ret = false;
@@ -208,7 +198,7 @@ bool Sts3x::getAlertThreshold(AlertThreshold limit, float &temperature)
             break;
     }
 
-    if (writeCmd(read_cmd) && readWords(&word, 1)) {
+    if (readCmd(read_cmd, &word, 1, STS3X_CMD_DURATION_USEC)) {
         /* convert threshold word to alert settings in 10*%RH & 10*°C */
         std::uint16_t rawT = ((word & STS3X_TEMPERATURE_LIMIT_MSK) << 7);
         temperature = convert_raw_temp(rawT);
@@ -218,30 +208,4 @@ bool Sts3x::getAlertThreshold(AlertThreshold limit, float &temperature)
     }
 
     return ret;
-}
-
-bool Sts3x::getStatus(std::uint16_t &status)
-{
-    const std::lock_guard<RecursiveMutex> lg(mutex);
-    return readCmd(
-      STS3X_CMD_READ_STATUS_REG, &status, 1, STS3X_CMD_DURATION_USEC
-    );
-}
-
-bool Sts3x::clearStatus()
-{
-    const std::lock_guard<RecursiveMutex> lg(mutex);
-    return writeCmd(STS3X_CMD_CLR_STATUS_REG);
-}
-
-bool Sts3x::heaterOn()
-{
-    const std::lock_guard<RecursiveMutex> lg(mutex);
-    return writeCmd(STS3X_CMD_HEATER_ON);
-}
-
-bool Sts3x::heaterOff()
-{
-    const std::lock_guard<RecursiveMutex> lg(mutex);
-    return writeCmd(STS3X_CMD_HEATER_OFF);
 }
