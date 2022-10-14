@@ -53,11 +53,6 @@ public:
     static constexpr std::uint8_t ADDR_A {0x4au};
     static constexpr std::uint8_t ADDR_B {0x4bu};
 
-    enum class Mode {
-        SINGLE_SHOT,
-        PERIODIC_DATA,
-    };
-
     enum AlertReadCmd : std::uint16_t {
         READ_HIALRT_LIM_SET = 0xE11F,
         READ_HIALRT_LIM_CLR = 0xE114,
@@ -79,7 +74,6 @@ public:
         HIGH_NO_CLOCK_STRETCH = 0x2400,
         MEDIUM_NO_CLOCK_STRETCH = 0x240B,
         LOW_NO_CLOCK_STRETCH = 0x2416,
-        SINGLE_NONE = 0xFFFF,
     };
 
     enum PeriodicMode : std::uint16_t {
@@ -98,7 +92,6 @@ public:
         HIGH_10_MPS = 0x2737,
         MEDIUM_10_MPS = 0x2721,
         LOW_10_MPS = 0x272A,
-        PERIODIC_NONE = 0xFFFF,
     };
 
     enum class AlertThreshold {
@@ -109,10 +102,20 @@ public:
     };
 
     Sts3x(TwoWire &interface, std::uint8_t address, pin_t alert_pin)
-      : SensirionBase(
-        interface, address, alert_pin, address == ADDR_A ? mutexA : mutexB
-      )
+      : SensirionBase(interface, address),
+        _alertPin(alert_pin),
+        _mutex(address == ADDR_A ? mutexA : mutexB)
     {}
+
+    /**
+     * @brief Initialize the interface
+     *
+     * @details Attempts to begin i2c transmission of the sensor to
+     * validate the sensor can communicate
+     *
+     * @return true on success, false on failure
+     */
+    bool init();
 
     /**
      * @brief Measure and read from an STS sensor the temperature and humidity
@@ -125,7 +128,7 @@ public:
      *
      * @return true on success, false on failure
      */
-    bool singleShotMeasureAndRead(
+    bool singleMeasurement(
       float &temperature,
       SingleMode s_setting = SingleMode::HIGH_NO_CLOCK_STRETCH
     );
@@ -191,7 +194,49 @@ public:
      */
     bool getAlertThreshold(AlertThreshold limit, float &temperature);
 
+    /**
+     * @brief Read the status register
+     *
+     * @details Sends a command to read the SHT status register
+     *
+     * @param[out] status read from the register
+     *
+     * @return true on success, false on failure
+     */
+    bool getStatus(std::uint16_t &status);
+
+    /**
+     * @brief Clear the status register
+     *
+     * @details Sends a command to clear the SHT status register
+     *
+     * @return true on success, false on failure
+     */
+    bool clearStatus();
+
+    /**
+     * @brief Turns the heater on to see plausability of values
+     *
+     * @details Sends the heater on command
+     *
+     * @return true on success, false on failure
+     */
+    bool heaterOn();
+
+    /**
+     * @brief Turns the heater off
+     *
+     * @details Sends the heater off command
+     *
+     * @return true on success, false on failure
+     */
+    bool heaterOff();
+
 private:
+    pin_t _alertPin;
+    RecursiveMutex &_mutex;
+
+    // Use separate mutexes per address
     static RecursiveMutex mutexA;
     static RecursiveMutex mutexB;
 };

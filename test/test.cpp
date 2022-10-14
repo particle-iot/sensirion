@@ -43,6 +43,7 @@ TEST_CASE("SHT tests")
 
     // setup init success
     Wire.end_transmission_return = endTransmissionReturns::SUCCESS;
+    Wire.num_bytes_to_write = 2;
     REQUIRE(device.init() == true);
 
     // setup heaterOn failure
@@ -114,29 +115,29 @@ TEST_CASE("SHT tests")
     Wire.data_read = clear_stat_pass_data;
     REQUIRE(device.getStatus(dummy_status) == true);
 
-    // setup singleShotMeasureAndRead failure 1
+    // setup singleMeasurement failure 1
     Wire.num_bytes_to_write = 0;
     Wire.num_bytes_to_read = 6;
     Wire.data_read = singleshot_pass_data;
-    REQUIRE(device.singleShotMeasureAndRead(temp, humidity) == false);
+    REQUIRE(device.singleMeasurement(temp, humidity) == false);
 
-    // setup singleShotMeasureAndRead failure 2
+    // setup singleMeasurement failure 2
     Wire.num_bytes_to_write = 2;
     Wire.num_bytes_to_read = 5;
     Wire.data_read = singleshot_pass_data;
-    REQUIRE(device.singleShotMeasureAndRead(temp, humidity) == false);
+    REQUIRE(device.singleMeasurement(temp, humidity) == false);
 
-    // setup singleShotMeasureAndRead failure 3
+    // setup singleMeasurement failure 3
     Wire.num_bytes_to_write = 2;
     Wire.num_bytes_to_read = 6;
     Wire.data_read = singleshot_fail_data;
-    REQUIRE(device.singleShotMeasureAndRead(temp, humidity) == false);
+    REQUIRE(device.singleMeasurement(temp, humidity) == false);
 
-    // setup singleShotMeasureAndRead success
+    // setup singleMeasurement success
     Wire.num_bytes_to_write = 2;
     Wire.num_bytes_to_read = 6;
     Wire.data_read = singleshot_pass_data;
-    REQUIRE(device.singleShotMeasureAndRead(temp, humidity) == true);
+    REQUIRE(device.singleMeasurement(temp, humidity) == true);
     REQUIRE(std::fabs(temp - 21.398f) < 3e-3f);
     REQUIRE(std::fabs(humidity - 45.692f) < 3e-3f);
 
@@ -174,7 +175,7 @@ TEST_CASE("STS tests")
 
     float temp;
 
-    Sts3x device(Wire, Sts3x::ADDR_A, 0);
+    Sts3x device(Wire, Sts3x::ADDR_A, 255);
 
     // setup init failure
     Wire.end_transmission_return = endTransmissionReturns::TIMEOUT;
@@ -182,6 +183,7 @@ TEST_CASE("STS tests")
 
     // setup init success
     Wire.end_transmission_return = endTransmissionReturns::SUCCESS;
+    Wire.num_bytes_to_write = 2;
     REQUIRE(device.init() == true);
 
     // setup heaterOn failure
@@ -253,29 +255,29 @@ TEST_CASE("STS tests")
     Wire.data_read = clear_stat_pass_data;
     REQUIRE(device.getStatus(dummy_status) == true);
 
-    // setup singleShotMeasureAndRead failure 1
+    // setup singleMeasurement failure 1
     Wire.num_bytes_to_write = 0;
     Wire.num_bytes_to_read = 3;
     Wire.data_read = singleshot_pass_data;
-    REQUIRE(device.singleShotMeasureAndRead(temp) == false);
+    REQUIRE(device.singleMeasurement(temp) == false);
 
-    // setup singleShotMeasureAndRead failure 2
+    // setup singleMeasurement failure 2
     Wire.num_bytes_to_write = 2;
     Wire.num_bytes_to_read = 2;
     Wire.data_read = singleshot_pass_data;
-    REQUIRE(device.singleShotMeasureAndRead(temp) == false);
+    REQUIRE(device.singleMeasurement(temp) == false);
 
-    // setup singleShotMeasureAndRead failure 3
+    // setup singleMeasurement failure 3
     Wire.num_bytes_to_write = 2;
     Wire.num_bytes_to_read = 3;
     Wire.data_read = singleshot_fail_data;
-    REQUIRE(device.singleShotMeasureAndRead(temp) == false);
+    REQUIRE(device.singleMeasurement(temp) == false);
 
-    // setup singleShotMeasureAndRead success
+    // setup singleMeasurement success
     Wire.num_bytes_to_write = 2;
     Wire.num_bytes_to_read = 3;
     Wire.data_read = singleshot_pass_data;
-    REQUIRE(device.singleShotMeasureAndRead(temp) == true);
+    REQUIRE(device.singleMeasurement(temp) == true);
     REQUIRE(std::fabs(temp - 21.149f) < 3e-3f);
 
     // setup periodicDataRead failure 1

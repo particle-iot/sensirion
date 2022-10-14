@@ -1,7 +1,6 @@
 #pragma once
 
 #include <functional>
-#include "spark_wiring_vector.h"
 #include <chrono>
 #include <mutex>
 
@@ -261,8 +260,6 @@ void delayMicroseconds(uint32_t us);
 
 #define Wire __fetch_global_Wire()
 TwoWire& __fetch_global_Wire();
-
-using namespace spark;
 
 class SystemClass {
 public:

@@ -50,21 +50,35 @@
 
 constexpr std::uint16_t STS3x_PERIODIC_READ_CMD = 0xE000;
 constexpr std::uint16_t SHT3X_BREAK_CMD = 0x3093;
+constexpr std::uint16_t SHT3X_CMD_READ_STATUS_REG = 0xF32D;
+constexpr std::uint16_t SHT3X_CMD_CLR_STATUS_REG = 0x3041;
+constexpr std::uint16_t SHT3X_CMD_HEATER_ON = 0x306D;
+constexpr std::uint16_t SHT3X_CMD_HEATER_OFF = 0x3066;
 
-constexpr std::uint16_t SHT3X_CMD_DURATION_USEC = 1000;
 constexpr std::uint16_t SHT3X_HUMIDITY_LIMIT_MSK = 0xFE00U;
 constexpr std::uint16_t SHT3X_TEMPERATURE_LIMIT_MSK = 0x01FFU;
 
 RecursiveMutex Sht3x::mutexA;
 RecursiveMutex Sht3x::mutexB;
 
-bool Sht3x::singleShotMeasureAndRead(
+bool Sht3x::init()
+{
+    bool ret = SensirionBase::init();
+
+    if (ret) {
+        pinMode(_alertPin, INPUT);
+        ret = writeCmd(SHT3X_BREAK_CMD);
+    }
+    return ret;
+}
+
+bool Sht3x::singleMeasurement(
   float &temperature, float &humidity, SingleMode mode
 )
 {
-    constexpr int delay_high {16};
-    constexpr int delay_medium {7};
-    constexpr int delay_low {5};
+    constexpr auto delay_high {16u};
+    constexpr auto delay_medium {7u};
+    constexpr auto delay_low {5u};
 
     const std::lock_guard<RecursiveMutex> lg(_mutex);
     std::uint16_t data[2];
@@ -187,7 +201,7 @@ bool Sht3x::getAlertThreshold(
             break;
     }
 
-    if (readCmd(read_cmd, &word, 1, SHT3X_CMD_DURATION_USEC)) {
+    if (readCmd(read_cmd, &word, 1)) {
         /* convert threshold word to alert settings in 10*%RH & 10*°C */
         std::uint16_t rawRH = (word & SHT3X_HUMIDITY_LIMIT_MSK);
         std::uint16_t rawT = ((word & SHT3X_TEMPERATURE_LIMIT_MSK) << 7);
@@ -200,4 +214,28 @@ bool Sht3x::getAlertThreshold(
     }
 
     return ret;
+}
+
+bool Sht3x::getStatus(std::uint16_t &status)
+{
+    const std::lock_guard<RecursiveMutex> lg(_mutex);
+    return readCmd(SHT3X_CMD_READ_STATUS_REG, &status, 1);
+}
+
+bool Sht3x::clearStatus()
+{
+    const std::lock_guard<RecursiveMutex> lg(_mutex);
+    return writeCmd(SHT3X_CMD_CLR_STATUS_REG);
+}
+
+bool Sht3x::heaterOn()
+{
+    const std::lock_guard<RecursiveMutex> lg(_mutex);
+    return writeCmd(SHT3X_CMD_HEATER_ON);
+}
+
+bool Sht3x::heaterOff()
+{
+    const std::lock_guard<RecursiveMutex> lg(_mutex);
+    return writeCmd(SHT3X_CMD_HEATER_OFF);
 }

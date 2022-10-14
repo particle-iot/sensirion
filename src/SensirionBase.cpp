@@ -53,15 +53,13 @@ constexpr unsigned int CRC8_INIT = 0xFF;
 constexpr unsigned int CRC8_LEN = 1;
 constexpr unsigned int SENSIRION_COMMAND_SIZE = 2;
 constexpr unsigned int SENSIRION_MAX_BUFFER_WORDS = 32;
+constexpr unsigned int SENSIRION_WORD_SIZE {2u};
 
 Logger SensirionBase::driver_log("sensirion-driver");
 
 bool SensirionBase::init()
 {
-    const std::lock_guard<RecursiveMutex> lg(_mutex);
     bool ret = true;
-
-    pinMode(_alertPin, INPUT);
 
     _i2c.begin();
     _i2c.beginTransmission(_address);
@@ -73,10 +71,7 @@ bool SensirionBase::init()
 }
 
 bool SensirionBase::readCmd(
-  std::uint16_t command,
-  std::uint16_t *data_words,
-  std::uint16_t num_words,
-  std::uint32_t delay_us
+  std::uint16_t command, std::uint16_t *data_words, std::uint16_t num_words
 )
 {
     std::uint8_t buf[SENSIRION_COMMAND_SIZE] {};
@@ -86,10 +81,6 @@ bool SensirionBase::readCmd(
 
     if (ret != SENSIRION_COMMAND_SIZE) {
         return false;
-    }
-
-    if (delay_us) {
-        delayMicroseconds(delay_us);
     }
 
     return readWords(data_words, num_words);
@@ -126,7 +117,7 @@ bool SensirionBase::writeCmdWithArgs(
     return ret;
 }
 
-std::uint16_t
+std::uint8_t
 SensirionBase::generateCrc(const std::uint8_t *data, std::uint8_t len)
 {
     std::uint16_t current_byte;
@@ -242,34 +233,4 @@ std::size_t SensirionBase::readRegister(std::uint8_t *buf, std::size_t length)
         }
     }
     return count;
-}
-
-constexpr std::uint16_t CMD_READ_STATUS_REG = 0xF32D;
-constexpr std::uint16_t CMD_CLR_STATUS_REG = 0x3041;
-constexpr std::uint16_t CMD_HEATER_ON = 0x306D;
-constexpr std::uint16_t CMD_HEATER_OFF = 0x3066;
-constexpr std::uint16_t CMD_DURATION_USEC = 1000;
-
-bool SensirionBase::getStatus(std::uint16_t &status)
-{
-    const std::lock_guard<RecursiveMutex> lg(_mutex);
-    return readCmd(CMD_READ_STATUS_REG, &status, 1, CMD_DURATION_USEC);
-}
-
-bool SensirionBase::clearStatus()
-{
-    const std::lock_guard<RecursiveMutex> lg(_mutex);
-    return writeCmd(CMD_CLR_STATUS_REG);
-}
-
-bool SensirionBase::heaterOn()
-{
-    const std::lock_guard<RecursiveMutex> lg(_mutex);
-    return writeCmd(CMD_HEATER_ON);
-}
-
-bool SensirionBase::heaterOff()
-{
-    const std::lock_guard<RecursiveMutex> lg(_mutex);
-    return writeCmd(CMD_HEATER_OFF);
 }

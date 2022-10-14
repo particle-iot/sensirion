@@ -21,24 +21,32 @@
 
 constexpr std::uint16_t STS3x_PERIODIC_READ_CMD = 0xE000;
 constexpr std::uint16_t STS3X_BREAK_CMD = 0x3093;
+constexpr std::uint16_t STS3X_CMD_READ_STATUS_REG = 0xF32D;
+constexpr std::uint16_t STS3X_CMD_CLR_STATUS_REG = 0x3041;
+constexpr std::uint16_t STS3X_CMD_HEATER_ON = 0x306D;
+constexpr std::uint16_t STS3X_CMD_HEATER_OFF = 0x3066;
 
-constexpr std::uint16_t STS3X_CMD_DURATION_USEC = 1000;
 constexpr std::uint16_t STS3X_TEMPERATURE_LIMIT_MSK = 0x01FFU;
-
-constexpr int ONE_WORD_SIZE = 1;
-constexpr int TWO_WORD_SIZE = 2;
-constexpr int FOUR_WORD_SIZE = 4;
-constexpr int EIGHT_WORD_SIZE = 8;
-constexpr int TEN_WORD_SIZE = 10;
 
 RecursiveMutex Sts3x::mutexA;
 RecursiveMutex Sts3x::mutexB;
 
-bool Sts3x::singleShotMeasureAndRead(float &temperature, SingleMode mode)
+bool Sts3x::init()
 {
-    constexpr int delay_high {16};
-    constexpr int delay_medium {7};
-    constexpr int delay_low {5};
+    bool ret = SensirionBase::init();
+
+    if (ret) {
+        pinMode(_alertPin, INPUT);
+        ret = writeCmd(STS3X_BREAK_CMD);
+    }
+    return ret;
+}
+
+bool Sts3x::singleMeasurement(float &temperature, SingleMode mode)
+{
+    constexpr auto delay_high {16u};
+    constexpr auto delay_medium {7u};
+    constexpr auto delay_low {5u};
 
     const std::lock_guard<RecursiveMutex> lg(_mutex);
     std::uint16_t data;
@@ -152,7 +160,7 @@ bool Sts3x::getAlertThreshold(AlertThreshold limit, float &temperature)
             break;
     }
 
-    if (readCmd(read_cmd, &word, 1, STS3X_CMD_DURATION_USEC)) {
+    if (readCmd(read_cmd, &word, 1)) {
         /* convert threshold word to alert settings in 10*%RH & 10*°C */
         std::uint16_t rawT = ((word & STS3X_TEMPERATURE_LIMIT_MSK) << 7);
         temperature = convert_raw_temp(rawT);
@@ -162,4 +170,28 @@ bool Sts3x::getAlertThreshold(AlertThreshold limit, float &temperature)
     }
 
     return ret;
+}
+
+bool Sts3x::getStatus(std::uint16_t &status)
+{
+    const std::lock_guard<RecursiveMutex> lg(_mutex);
+    return readCmd(STS3X_CMD_READ_STATUS_REG, &status, 1);
+}
+
+bool Sts3x::clearStatus()
+{
+    const std::lock_guard<RecursiveMutex> lg(_mutex);
+    return writeCmd(STS3X_CMD_CLR_STATUS_REG);
+}
+
+bool Sts3x::heaterOn()
+{
+    const std::lock_guard<RecursiveMutex> lg(_mutex);
+    return writeCmd(STS3X_CMD_HEATER_ON);
+}
+
+bool Sts3x::heaterOff()
+{
+    const std::lock_guard<RecursiveMutex> lg(_mutex);
+    return writeCmd(STS3X_CMD_HEATER_OFF);
 }
