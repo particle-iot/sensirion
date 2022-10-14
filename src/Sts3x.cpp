@@ -33,6 +33,7 @@ RecursiveMutex Sts3x::mutexB;
 
 bool Sts3x::init()
 {
+    const std::lock_guard<RecursiveMutex> lg(_mutex);
     bool ret = SensirionBase::init();
 
     if (ret) {
