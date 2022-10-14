@@ -139,7 +139,7 @@ bool Sht3x::periodicDataRead(float &temperature, float &humidity)
 }
 
 bool Sht3x::setAlertThreshold(
-  AlertThreshold limit, float humidity, float temperature
+  AlertThreshold limit, float temperature, float humidity
 )
 {
     std::uint16_t limitVal = 0U;
@@ -178,7 +178,7 @@ bool Sht3x::setAlertThreshold(
 }
 
 bool Sht3x::getAlertThreshold(
-  AlertThreshold limit, float &humidity, float &temperature
+  AlertThreshold limit, float &temperature, float &humidity
 )
 {
     std::uint16_t word;

@@ -149,13 +149,13 @@ public:
      * by setting the low set point above the high set point.
      *
      * @param[in] limit the limit to set
-     * @param[in] humidity humidity threshold value
      * @param[in] temperature temperature threshold value
+     * @param[in] humidity humidity threshold value
      *
      * @return true on success, false on failure
      */
     bool
-    setAlertThreshold(AlertThreshold limit, float humidity, float temperature);
+    setAlertThreshold(AlertThreshold limit, float temperature, float humidity);
 
     /**
      * @brief Get tresholds for alert mode
@@ -163,13 +163,13 @@ public:
      * @details Read limits for the alert mode
      *
      * @param[in] limit the limit to read
-     * @param[out] humidity humidity threshold value
      * @param[out] temperature temperature threshold value
+     * @param[out] humidity humidity threshold value
      *
      * @return true on success, false on failure
      */
     bool getAlertThreshold(
-      AlertThreshold limit, float &humidity, float &temperature
+      AlertThreshold limit, float &temperature, float &humidity
     );
 
     /**
