@@ -55,121 +55,73 @@ constexpr std::uint16_t SHT3X_CMD_DURATION_USEC = 1000;
 constexpr std::uint16_t SHT3X_HUMIDITY_LIMIT_MSK = 0xFE00U;
 constexpr std::uint16_t SHT3X_TEMPERATURE_LIMIT_MSK = 0x01FFU;
 
-constexpr int ONE_WORD_SIZE = 1;
-constexpr int TWO_WORD_SIZE = 2;
-constexpr int FOUR_WORD_SIZE = 4;
-constexpr int EIGHT_WORD_SIZE = 8;
-constexpr int TEN_WORD_SIZE = 10;
-
 RecursiveMutex Sht3x::mutexA;
 RecursiveMutex Sht3x::mutexB;
 
 bool Sht3x::singleShotMeasureAndRead(
-  float &temperature, float &humidity, SingleMode s_setting
+  float &temperature, float &humidity, SingleMode mode
 )
 {
-    bool ret = true;
+    constexpr int delay_high {16};
+    constexpr int delay_medium {7};
+    constexpr int delay_low {5};
+
     const std::lock_guard<RecursiveMutex> lg(_mutex);
+    std::uint16_t data[2];
 
-    if (measure(Mode::SINGLE_SHOT, s_setting) == true) {
-        ret = singleShotRead(temperature, humidity);
-    } else {
-        driver_log.error("SHT-3x measure failed");
-        ret = false;
-    }
-    return ret;
-}
-
-bool Sht3x::measure(Mode mode, SingleMode s_setting, PeriodicMode p_setting)
-{
-    bool ret = true;
-    const std::lock_guard<RecursiveMutex> lg(_mutex);
-
-    _sht3x_cmd_measure = (mode == Mode::SINGLE_SHOT) ? (std::uint16_t)s_setting
-                                                     : (std::uint16_t)p_setting;
-
-    // break command to stop a previous periodic mode measure
-    ret = writeCmd(SHT3X_BREAK_CMD);
-    delay(1); // must delay 1ms to allow SHT3X to stop periodic data
-
-    // do a check here if it happens to fail
-    // the break command when in periodic mode
-    if (ret) {
-        ret = writeCmd(_sht3x_cmd_measure);
+    bool ret = writeCmd(static_cast<std::uint16_t>(mode));
+    if (!ret) {
+        return ret;
     }
 
-    return ret;
-}
-
-bool Sht3x::singleShotRead(float &temperature, float &humidity)
-{
-    std::uint16_t words[2] {};
-    const std::lock_guard<RecursiveMutex> lg(_mutex);
-
-    bool ret = readWords(words, 2);
-
-    temperature = convert_raw_temp(words[0]);
-    humidity = convert_raw_humidity(words[1]);
-
-    return ret;
-}
-
-bool Sht3x::periodicDataRead(Vector<std::pair<float, float>> &data)
-{
-    const std::lock_guard<RecursiveMutex> lg(_mutex);
-
-    int num_of_words = _get_mps_size_to_words();
-    Vector<std::uint16_t> words(num_of_words);
-    bool ret = false;
-
-    if (writeCmd(STS3x_PERIODIC_READ_CMD)) {
-        ret = readWords(words.data(), num_of_words);
-    }
-
-    for (int i = 0; i < num_of_words; i += 2) {
-        data.append(std::make_pair(words.at(i), words.at(i + 1)));
-    }
-
-    return ret;
-}
-
-int Sht3x::_get_mps_size_to_words()
-{
-    int size {};
-
-    switch (_sht3x_cmd_measure) {
-        case HIGH_05_MPS:
-        case MEDIUM_05_MPS:
-        case LOW_05_MPS:
-            size = ONE_WORD_SIZE;
+    switch (mode) {
+        case SingleMode::HIGH_NO_CLOCK_STRETCH:
+            delay(delay_high);
             break;
-        case HIGH_1_MPS:
-        case MEDIUM_1_MPS:
-        case LOW_1_MPS:
-            size = TWO_WORD_SIZE;
+        case SingleMode::MEDIUM_NO_CLOCK_STRETCH:
+            delay(delay_medium);
             break;
-        case HIGH_2_MPS:
-        case MEDIUM_2_MPS:
-        case LOW_2_MPS:
-            size = FOUR_WORD_SIZE;
+        case SingleMode::LOW_NO_CLOCK_STRETCH:
+            delay(delay_low);
             break;
-        case HIGH_4_MPS:
-        case MEDIUM_4_MPS:
-        case LOW_4_MPS:
-            size = EIGHT_WORD_SIZE;
-            break;
-        case HIGH_10_MPS:
-        case MEDIUM_10_MPS:
-        case LOW_10_MPS:
-            size = TEN_WORD_SIZE;
-            break;
-
         default:
-            size = 0;
             break;
     }
 
-    return size;
+    ret = readWords(data, 2);
+    if (ret) {
+        temperature = convert_raw_temp(data[0]);
+        humidity = convert_raw_humidity(data[1]);
+    }
+
+    return ret;
+}
+
+bool Sht3x::startPeriodicMeasurement(PeriodicMode mode)
+{
+    const std::lock_guard<RecursiveMutex> lg(_mutex);
+    return writeCmd(static_cast<std::uint16_t>(mode));
+}
+
+bool Sht3x::stopPeriodicMeasurement()
+{
+    const std::lock_guard<RecursiveMutex> lg(_mutex);
+    return writeCmd(SHT3X_BREAK_CMD);
+}
+
+bool Sht3x::periodicDataRead(float &temperature, float &humidity)
+{
+    const std::lock_guard<RecursiveMutex> lg(_mutex);
+
+    uint16_t data[2];
+    bool ret = readCmd(STS3x_PERIODIC_READ_CMD, data, 2);
+
+    if (ret) {
+        temperature = convert_raw_temp(data[0]);
+        humidity = convert_raw_humidity(data[1]);
+    }
+
+    return ret;
 }
 
 bool Sht3x::setAlertThreshold(

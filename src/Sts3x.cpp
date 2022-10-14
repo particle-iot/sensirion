@@ -25,8 +25,6 @@ constexpr std::uint16_t STS3X_BREAK_CMD = 0x3093;
 constexpr std::uint16_t STS3X_CMD_DURATION_USEC = 1000;
 constexpr std::uint16_t STS3X_TEMPERATURE_LIMIT_MSK = 0x01FFU;
 
-constexpr std::uint16_t STS_DELIMITER = 0xFFFF;
-
 constexpr int ONE_WORD_SIZE = 1;
 constexpr int TWO_WORD_SIZE = 2;
 constexpr int FOUR_WORD_SIZE = 4;
@@ -36,109 +34,66 @@ constexpr int TEN_WORD_SIZE = 10;
 RecursiveMutex Sts3x::mutexA;
 RecursiveMutex Sts3x::mutexB;
 
-bool Sts3x::singleShotMeasureAndRead(float &temperature, SingleMode s_setting)
+bool Sts3x::singleShotMeasureAndRead(float &temperature, SingleMode mode)
 {
-    bool ret = true;
+    constexpr int delay_high {16};
+    constexpr int delay_medium {7};
+    constexpr int delay_low {5};
+
     const std::lock_guard<RecursiveMutex> lg(_mutex);
+    std::uint16_t data;
 
-    if (measure(Mode::SINGLE_SHOT, s_setting) == true) {
-        ret = singleShotRead(temperature);
-    } else {
-        driver_log.error("STS-3x measure failed");
-        ret = false;
-    }
-    return ret;
-}
-
-bool Sts3x::measure(Mode mode, SingleMode s_setting, PeriodicMode p_setting)
-{
-    bool ret = true;
-    const std::lock_guard<RecursiveMutex> lg(_mutex);
-
-    _sts3x_cmd_measure = (mode == Mode::SINGLE_SHOT) ? (std::uint16_t)s_setting
-                                                     : (std::uint16_t)p_setting;
-
-    // break command to stop a previous periodic mode measure
-    ret = writeCmd(STS3X_BREAK_CMD);
-    delay(1); // must delay 1ms to allow STS3X to stop periodic data
-
-    // do a check here if it happens to fail
-    // the break command when in periodic mode
-    if (ret) {
-        ret = writeCmd(_sts3x_cmd_measure);
+    bool ret = writeCmd(static_cast<std::uint16_t>(mode));
+    if (!ret) {
+        return ret;
     }
 
-    return ret;
-}
-
-bool Sts3x::singleShotRead(float &temperature)
-{
-    std::uint16_t raw_temp;
-    const std::lock_guard<RecursiveMutex> lg(_mutex);
-
-    bool ret = readWords(&raw_temp, 1);
-
-    temperature = convert_raw_temp(raw_temp);
-
-    return ret;
-}
-
-bool Sts3x::periodicDataRead(Vector<float> &data)
-{
-    const std::lock_guard<RecursiveMutex> lg(_mutex);
-    int num_of_words = _get_mps_size_to_words();
-    Vector<std::uint16_t> words(num_of_words);
-    bool ret = false;
-
-    if (writeCmd(STS3x_PERIODIC_READ_CMD)) {
-        ret = readWords(words.data(), num_of_words);
-    }
-
-    for (int i = 0; i < num_of_words; i++) {
-        if (words.at(i) != STS_DELIMITER) {
-            data.append(convert_raw_temp(words.at(i)));
-        }
-    }
-
-    return ret;
-}
-
-int Sts3x::_get_mps_size_to_words()
-{
-    int size {};
-
-    switch (_sts3x_cmd_measure) {
-        case HIGH_05_MPS:
-        case MEDIUM_05_MPS:
-        case LOW_05_MPS:
-            size = ONE_WORD_SIZE;
+    switch (mode) {
+        case SingleMode::HIGH_NO_CLOCK_STRETCH:
+            delay(delay_high);
             break;
-        case HIGH_1_MPS:
-        case MEDIUM_1_MPS:
-        case LOW_1_MPS:
-            size = TWO_WORD_SIZE;
+        case SingleMode::MEDIUM_NO_CLOCK_STRETCH:
+            delay(delay_medium);
             break;
-        case HIGH_2_MPS:
-        case MEDIUM_2_MPS:
-        case LOW_2_MPS:
-            size = FOUR_WORD_SIZE;
-            break;
-        case HIGH_4_MPS:
-        case MEDIUM_4_MPS:
-        case LOW_4_MPS:
-            size = EIGHT_WORD_SIZE;
-            break;
-        case HIGH_10_MPS:
-        case MEDIUM_10_MPS:
-        case LOW_10_MPS:
-            size = TEN_WORD_SIZE;
+        case SingleMode::LOW_NO_CLOCK_STRETCH:
+            delay(delay_low);
             break;
         default:
-            size = 0;
             break;
     }
 
-    return size;
+    ret = readWords(&data, 1);
+    if (ret) {
+        temperature = convert_raw_temp(data);
+    }
+
+    return ret;
+}
+
+bool Sts3x::startPeriodicMeasurement(PeriodicMode mode)
+{
+    const std::lock_guard<RecursiveMutex> lg(_mutex);
+    return writeCmd(static_cast<std::uint16_t>(mode));
+}
+
+bool Sts3x::stopPeriodicMeasurement()
+{
+    const std::lock_guard<RecursiveMutex> lg(_mutex);
+    return writeCmd(STS3X_BREAK_CMD);
+}
+
+bool Sts3x::periodicDataRead(float &temperature)
+{
+    const std::lock_guard<RecursiveMutex> lg(_mutex);
+
+    uint16_t raw_temp;
+    bool ret = readCmd(STS3x_PERIODIC_READ_CMD, &raw_temp, 1);
+
+    if (ret) {
+        temperature = convert_raw_temp(raw_temp);
+    }
+
+    return ret;
 }
 
 bool Sts3x::setAlertThreshold(AlertThreshold limit, float temperature)

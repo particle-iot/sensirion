@@ -16,7 +16,6 @@
 #pragma once
 
 #include <cstdint>
-#include <utility>
 
 #include "SensirionBase.h"
 
@@ -24,11 +23,6 @@ class Sht3x : public SensirionBase {
 public:
     static constexpr std::uint8_t ADDR_A {0x44u};
     static constexpr std::uint8_t ADDR_B {0x45u};
-
-    enum class Mode {
-        SINGLE_SHOT,
-        PERIODIC_DATA,
-    };
 
     enum AlertReadCmd : std::uint16_t {
         READ_HIALRT_LIM_SET = 0xE11F,
@@ -83,8 +77,7 @@ public:
     Sht3x(TwoWire &interface, std::uint8_t address, pin_t alert_pin)
       : SensirionBase(
         interface, address, alert_pin, address == ADDR_A ? mutexA : mutexB
-      ),
-        _sht3x_cmd_measure(SingleMode::SINGLE_NONE)
+      )
     {}
 
     /**
@@ -104,56 +97,48 @@ public:
       float &humidity,
       SingleMode s_setting = SingleMode::HIGH_NO_CLOCK_STRETCH
     );
+
     /**
-     * @brief Measure from an SHT sensor
+     * @brief Start periodic measurement
      *
-     * @details Write to an SHT sensor the command to start a measurement.
-     * Either sends the single shot mode, or periodic mode depending on the
-     * mode chosen. Default is single shot.
+     * @details Start periodic temperature and humidity measurements at the
+     * commanded repeatability and rate
      *
-     * @param[in] mode measurement mode to chose from
-     * @param[in] s_setting single mode setting
-     * @param[in] p_setting periodic mode setting
+     * @param[in] mode periodic mode to use
      *
      * @return true on success, false on failure
      */
-    bool measure(
-      Mode mode = Mode::SINGLE_SHOT,
-      SingleMode s_setting = SingleMode::HIGH_NO_CLOCK_STRETCH,
-      PeriodicMode p_setting = PeriodicMode::PERIODIC_NONE
-    );
+    bool startPeriodicMeasurement(PeriodicMode);
 
     /**
-     * @brief Read a started single shot measurement from an SHT sensor
+     * @brief Stop periodic measurement
      *
-     * @details Read from an SHT sensor a measurement that has already started
+     * @details Stop any periodic temperature and humidity measurement in
+     * progress
+     *
+     * @return true on success, false on failure
+     */
+    bool stopPeriodicMeasurement();
+
+    /**
+     * @brief Read a started periodic mode measurement from an SHT sensor.
+     *
+     * @details Read from an SHT sensor periodic mode measurement(s) that has
+     * already started. Must call the startPeriodicMeasurement() function before
+     * calling this function.
      *
      * @param[out] temperature measured and read in Celsius
      * @param[out] humidity measured and read in %
      *
      * @return true on success, false on failure
      */
-    bool singleShotRead(float &temperature, float &humidity);
-
-    /**
-     * @brief Read a started periodic mode measurement from an SHT sensor.
-     *
-     * @details Read from an SHT sensor periodic mode measurement(s) that has
-     * already started. Each measurement contains a temperature and humidty.
-     * The number of measurements read back depends on the MPS for the peridoc
-     * mode setting chosen when the measure() function was called. Must call the
-     * measure() function before calling this function.
-     *
-     * @param[out] data contains the data read.
-     *
-     * @return true on success, false on failure
-     */
-    bool periodicDataRead(Vector<std::pair<float, float>> &data);
+    bool periodicDataRead(float &temperature, float &humidity);
 
     /**
      * @brief Set thresholds for alert mode
      *
-     * @details <details of the function>
+     * @details Set limits for the alert mode. An alert can be disabled
+     * by setting the low set point above the high set point.
      *
      * @param[in] limit the limit to set
      * @param[in] humidity humidity threshold value
@@ -180,20 +165,6 @@ public:
     );
 
 private:
-    /**
-     * @brief Returns the MPS word size expected in a single second for
-     * reading all of the measuremnts in periodic mode
-     *
-     * @details Calculates the total number of words needed to read all of
-     * the measurements in a single second while in periodic mode. So if you
-     * setup the SHT to read 10MPS in periodic mode that is 20 words, 4MPS is
-     * 8 words, 2MPS 4 words, etc.
-     *
-     * @return number of words in a single second read
-     */
-    int _get_mps_size_to_words();
-
     static RecursiveMutex mutexA;
     static RecursiveMutex mutexB;
-    std::uint16_t _sht3x_cmd_measure;
 };

@@ -111,8 +111,7 @@ public:
     Sts3x(TwoWire &interface, std::uint8_t address, pin_t alert_pin)
       : SensirionBase(
         interface, address, alert_pin, address == ADDR_A ? mutexA : mutexB
-      ),
-        _sts3x_cmd_measure(SingleMode::SINGLE_NONE)
+      )
     {}
 
     /**
@@ -130,35 +129,28 @@ public:
       float &temperature,
       SingleMode s_setting = SingleMode::HIGH_NO_CLOCK_STRETCH
     );
-    /**
-     * @brief Measure from an STS sensor
-     *
-     * @details Write to an STS sensor the command to start a measurement.
-     * Either sends the single shot mode, or periodic mode depending on the
-     * mode chosen. Default is single shot.
-     *
-     * @param[in] mode measurement mode to chose from
-     * @param[in] s_setting single mode setting
-     * @param[in] p_setting periodic mode setting
-     *
-     * @return true on success, false on failure
-     */
-    bool measure(
-      Mode mode = Mode::SINGLE_SHOT,
-      SingleMode s_setting = SingleMode::HIGH_NO_CLOCK_STRETCH,
-      PeriodicMode p_setting = PeriodicMode::PERIODIC_NONE
-    );
 
     /**
-     * @brief Read a started measurement from an STS sensor
+     * @brief Start periodic measurement
      *
-     * @details Read from an STS sensor a measurement that has already started
+     * @details Start periodic temperature and humidity measurements at the
+     * commanded repeatability and rate
      *
-     * @param[out] temperature measured and read in Celsius
+     * @param[in] mode periodic mode to use
      *
      * @return true on success, false on failure
      */
-    bool singleShotRead(float &temperature);
+    bool startPeriodicMeasurement(PeriodicMode);
+
+    /**
+     * @brief Stop periodic measurement
+     *
+     * @details Stop any periodic temperature and humidity measurement in
+     * progress
+     *
+     * @return true on success, false on failure
+     */
+    bool stopPeriodicMeasurement();
 
     /**
      * @brief Read a started periodic mode measurement from an STS sensor.
@@ -168,18 +160,20 @@ public:
      * The number of measurements read back depends on the MPS for the peridoc
      * mode setting chosen when the measure() function was called
      *
-     * @param[out] data contains the data read.
+     * @param[out] temperature contains the data read.
      *
      * @return true on success, false on failure
      */
-    bool periodicDataRead(Vector<float> &data);
+    bool periodicDataRead(float &temperature);
 
     /**
-     * @brief <enter a brief one sentence description>
+     * @brief Set thresholds for alert mode
      *
-     * @details <details of the function>
+     * @details Set limits for the alert mode. An alert can be disabled
+     * by setting the low set point above the high set point.
      *
-     * @param[in,out] <name of variable> <description of variable>
+     * @param[in] limit the limit to set
+     * @param[in] temperature temperature threshold value
      *
      * @return true on success, false on failure
      */
@@ -198,20 +192,6 @@ public:
     bool getAlertThreshold(AlertThreshold limit, float &temperature);
 
 private:
-    /**
-     * @brief Returns the MPS word size expected in a single second for
-     * reading all of the measuremnts in periodic mode
-     *
-     * @details Calculates the total number of words needed to read all of
-     * the measurements in a single second while in periodic mode. So if you
-     * setup the SHT to read 10MPS in periodic mode that is 20 words, 4MPS is
-     * 8 words, 2MPS 4 words, etc.
-     *
-     * @return number of words in a single second read
-     */
-    int _get_mps_size_to_words();
-
     static RecursiveMutex mutexA;
     static RecursiveMutex mutexB;
-    std::uint16_t _sts3x_cmd_measure;
 };
