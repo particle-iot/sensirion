@@ -1,4 +1,22 @@
+/**
+ * Copyright (c) 2022 Particle Industries, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #define CATCH_CONFIG_MAIN
+
+#include <cmath>
 
 #include "Particle.h"
 #include "catch.h"
@@ -9,274 +27,273 @@
 constexpr int clear_stat_pass_data[] = {0x83, 0xF0, 0x0D};
 constexpr int clear_stat_fail_data[] = {0x83, 0xF0, 0x0E};
 
-Sht3x* sht;
-Sts3x* sts;
-
-TEST_CASE("SHT tests") {
+TEST_CASE("SHT tests")
+{
     constexpr int singleshot_pass_data[] = {0x61, 0x21, 0x97, 0x74, 0xF8, 0x02};
     constexpr int singleshot_fail_data[] = {0x61, 0x21, 0x97, 0x74, 0xF8, 0x03};
-    constexpr int periodic_pass_data[] = {0x62, 0x2E, 0x94, 0x96, 0x83, 0xBF, 0x62, 
-                0x2E, 0x94, 0x96, 0xAA, 0xB1, 0x62, 0x2E, 0x94, 0x96, 0xF5, 0xE1, 
-                0x62, 0x29, 0x03, 0x96, 0xFB, 0xFE};
-    constexpr int periodic_fail_data[] = {0x62, 0x2E, 0x94, 0x96, 0x83, 0xBF, 0x62, 
-                0x2E, 0x94, 0x96, 0xAA, 0xB1, 0x62, 0x2E, 0x94, 0x96, 0xF5, 0xE1, 
-                0x62, 0x29, 0x03, 0x96, 0xFB, 0xFD};
 
-    float temp = 0;
-    float humidity = 0;
-    Vector<float> data;
+    float temp;
+    float humidity;
 
-    sht  = new (std::nothrow) Sht3x(Wire, Sht3x::Addr::ADDR_A, 0);
+    Sht3x device(Wire, Sht3x::AddrA, 255);
 
-    //setup init failure
+    // setup init failure
     Wire.end_transmission_return = endTransmissionReturns::TIMEOUT;
-    REQUIRE(sht->init() == SensirionBase::ErrorCodes::ERROR_FAIL);
-    
-    //setup init success
+    REQUIRE(device.init() == false);
+
+    // setup init success
     Wire.end_transmission_return = endTransmissionReturns::SUCCESS;
-    REQUIRE(sht->init() == SensirionBase::ErrorCodes::NO_ERROR);
-
-    //setup heaterOn failure
-    Wire.num_bytes_to_write = 0;
-    REQUIRE(sht->heaterOn() == SensirionBase::ErrorCodes::ERROR_FAIL);
-
-    //setup heaterOn success
     Wire.num_bytes_to_write = 2;
-    REQUIRE(sht->heaterOn() == SensirionBase::ErrorCodes::NO_ERROR);
+    REQUIRE(device.init() == true);
 
-    //setup heaterOff failure
+    // setup heaterOn failure
     Wire.num_bytes_to_write = 0;
-    REQUIRE(sht->heaterOff() == SensirionBase::ErrorCodes::ERROR_FAIL);
+    REQUIRE(device.heaterOn() == false);
 
-    //setup heaterOff success
+    // setup heaterOn success
     Wire.num_bytes_to_write = 2;
-    REQUIRE(sht->heaterOff() == SensirionBase::ErrorCodes::NO_ERROR);
+    REQUIRE(device.heaterOn() == true);
 
-    //setup clearStatus failure
+    // setup heaterOff failure
     Wire.num_bytes_to_write = 0;
-    REQUIRE(sht->clearStatus() == SensirionBase::ErrorCodes::ERROR_FAIL);
+    REQUIRE(device.heaterOff() == false);
 
-    //setup getStatus success
+    // setup heaterOff success
     Wire.num_bytes_to_write = 2;
-    REQUIRE(sht->clearStatus() == SensirionBase::ErrorCodes::NO_ERROR);
+    REQUIRE(device.heaterOff() == true);
 
-    //setup getStatus failure 1
-    uint16_t dummy_status{};
+    // setup clearStatus failure
+    Wire.num_bytes_to_write = 0;
+    REQUIRE(device.clearStatus() == false);
+
+    // setup getStatus success
+    Wire.num_bytes_to_write = 2;
+    REQUIRE(device.clearStatus() == true);
+
+    // setup startPeriodicMeasurement failure
+    Wire.num_bytes_to_write = 0;
+    REQUIRE(device.startPeriodicMeasurement(Sht3x::PeriodicMode::High4Hz) == false);
+
+    // setup startPeriodicMeasurement success
+    Wire.num_bytes_to_write = 2;
+    REQUIRE(device.startPeriodicMeasurement(Sht3x::PeriodicMode::High4Hz) == true);
+
+    // setup stopPeriodicMeasurement failure
+    Wire.num_bytes_to_write = 0;
+    REQUIRE(device.stopPeriodicMeasurement() == false);
+
+    // setup stopPeriodicMeasurement success
+    Wire.num_bytes_to_write = 2;
+    REQUIRE(device.stopPeriodicMeasurement() == true);
+
+    // setup getStatus failure 1
+    uint16_t dummy_status {};
     Wire.num_bytes_to_write = 0;
     Wire.num_bytes_to_read = 3;
     Wire.data_read = clear_stat_pass_data;
-    REQUIRE(sht->getStatus(dummy_status) == SensirionBase::ErrorCodes::ERROR_FAIL);
+    REQUIRE(device.getStatus(dummy_status) == false);
 
-    //setup getStatus failure 2
+    // setup getStatus failure 2
     Wire.num_bytes_to_write = 2;
     Wire.num_bytes_to_read = 0;
     Wire.data_read = clear_stat_pass_data;
-    REQUIRE(sht->getStatus(dummy_status) == SensirionBase::ErrorCodes::ERROR_FAIL);
+    REQUIRE(device.getStatus(dummy_status) == false);
 
-    //setup getStatus failure  3
+    // setup getStatus failure  3
     Wire.num_bytes_to_write = 2;
     Wire.num_bytes_to_read = 3;
     Wire.data_read = clear_stat_fail_data;
-    REQUIRE(sht->getStatus(dummy_status) == SensirionBase::ErrorCodes::ERROR_FAIL);
+    REQUIRE(device.getStatus(dummy_status) == false);
 
-    //setup getStatus success
+    // setup getStatus success
     Wire.num_bytes_to_write = 2;
     Wire.num_bytes_to_read = 3;
     Wire.data_read = clear_stat_pass_data;
-    REQUIRE(sht->getStatus(dummy_status) == SensirionBase::ErrorCodes::NO_ERROR);
+    REQUIRE(device.getStatus(dummy_status) == true);
 
-    //setup singleShotMeasureAndRead failure 1
+    // setup singleMeasurement failure 1
     Wire.num_bytes_to_write = 0;
     Wire.num_bytes_to_read = 6;
     Wire.data_read = singleshot_pass_data;
-    REQUIRE(sht->singleShotMeasureAndRead(temp, humidity) == SensirionBase::ErrorCodes::ERROR_FAIL);
+    REQUIRE(device.singleMeasurement(temp, humidity) == false);
 
-    //setup singleShotMeasureAndRead failure 2
+    // setup singleMeasurement failure 2
     Wire.num_bytes_to_write = 2;
     Wire.num_bytes_to_read = 5;
     Wire.data_read = singleshot_pass_data;
-    REQUIRE(sht->singleShotMeasureAndRead(temp, humidity) == SensirionBase::ErrorCodes::ERROR_FAIL);
+    REQUIRE(device.singleMeasurement(temp, humidity) == false);
 
-    //setup singleShotMeasureAndRead failure 3
+    // setup singleMeasurement failure 3
     Wire.num_bytes_to_write = 2;
     Wire.num_bytes_to_read = 6;
     Wire.data_read = singleshot_fail_data;
-    REQUIRE(sht->singleShotMeasureAndRead(temp, humidity) == SensirionBase::ErrorCodes::ERROR_FAIL);
+    REQUIRE(device.singleMeasurement(temp, humidity) == false);
 
-    //setup singleShotMeasureAndRead success
+    // setup singleMeasurement success
     Wire.num_bytes_to_write = 2;
     Wire.num_bytes_to_read = 6;
     Wire.data_read = singleshot_pass_data;
-    REQUIRE(sht->singleShotMeasureAndRead(temp, humidity) == SensirionBase::ErrorCodes::NO_ERROR);
+    REQUIRE(device.singleMeasurement(temp, humidity) == true);
+    REQUIRE(std::fabs(temp - 21.398f) < 3e-3f);
+    REQUIRE(std::fabs(humidity - 45.692f) < 3e-3f);
 
-    //setup the periodicDataRead failure 1
-    sht->measure(Sht3x::Mode::PERIODIC_DATA, 
-                Sht3x::SingleMode::SINGLE_NONE, 
-                Sht3x::PeriodicMode::HIGH_4_MPS);
+    // setup periodicDataRead failure 1
     Wire.num_bytes_to_write = 0;
-    Wire.num_bytes_to_read = 24;
-    Wire.data_read = periodic_pass_data;
-    REQUIRE(sht->periodicDataRead(data) == SensirionBase::ErrorCodes::ERROR_FAIL);
+    Wire.num_bytes_to_read = 6;
+    Wire.data_read = singleshot_pass_data;
+    REQUIRE(device.periodicDataRead(temp, humidity) == false);
 
-    //setup the periodicDataRead failure 2
-    sht->measure(Sht3x::Mode::PERIODIC_DATA, 
-                Sht3x::SingleMode::SINGLE_NONE, 
-                Sht3x::PeriodicMode::HIGH_4_MPS);
+    // setup periodicDataRead failure 2
     Wire.num_bytes_to_write = 2;
-    Wire.num_bytes_to_read = 23;
-    Wire.data_read = periodic_pass_data;
-    REQUIRE(sht->periodicDataRead(data) == SensirionBase::ErrorCodes::ERROR_FAIL);
+    Wire.num_bytes_to_read = 5;
+    Wire.data_read = singleshot_pass_data;
+    REQUIRE(device.periodicDataRead(temp, humidity) == false);
 
-    //setup the periodicDataRead failure 3
-    sht->measure(Sht3x::Mode::PERIODIC_DATA, 
-                Sht3x::SingleMode::SINGLE_NONE, 
-                Sht3x::PeriodicMode::HIGH_4_MPS);
+    // setup periodicDataRead failure 3
     Wire.num_bytes_to_write = 2;
-    Wire.num_bytes_to_read = 24;
-    Wire.data_read = periodic_fail_data;
-    REQUIRE(sht->periodicDataRead(data) == SensirionBase::ErrorCodes::ERROR_FAIL);
+    Wire.num_bytes_to_read = 6;
+    Wire.data_read = singleshot_fail_data;
+    REQUIRE(device.periodicDataRead(temp, humidity) == false);
 
-
-    //setup the periodicDataRead success
-    sht->measure(Sht3x::Mode::PERIODIC_DATA, 
-                Sht3x::SingleMode::SINGLE_NONE, 
-                Sht3x::PeriodicMode::HIGH_4_MPS);
+    // setup periodicDataRead success
     Wire.num_bytes_to_write = 2;
-    Wire.num_bytes_to_read = 24;
-    Wire.data_read = periodic_pass_data;
-    REQUIRE(sht->periodicDataRead(data) == SensirionBase::ErrorCodes::NO_ERROR);
+    Wire.num_bytes_to_read = 6;
+    Wire.data_read = singleshot_pass_data;
+    REQUIRE(device.periodicDataRead(temp, humidity) == true);
+    REQUIRE(std::fabs(temp - 21.398f) < 3e-3f);
+    REQUIRE(std::fabs(humidity - 45.692f) < 3e-3f);
 }
 
-TEST_CASE("STS tests") {
+TEST_CASE("STS tests")
+{
     constexpr int singleshot_pass_data[] = {0x60, 0xC4, 0x57};
     constexpr int singleshot_fail_data[] = {0x60, 0xC4, 0x56};
-    constexpr int periodic_pass_data[] = {0x60, 0x55, 0x5F, 0xFF, 0xFF, 0xAC, 
-                0x60, 0x5A, 0x71, 0xFF, 0xFF, 0xAC, 0x60, 0x4F, 0xC7, 0xFF, 0xFF,
-                0xAC, 0x60, 0x4F, 0xC7, 0xFF, 0xFF, 0xAC};
-    constexpr int periodic_fail_data[] = {0x60, 0x55, 0x5F, 0xFF, 0xFF, 0xAC, 
-                0x60, 0x5A, 0x71, 0xFF, 0xFF, 0xAC, 0x60, 0x4F, 0xC7, 0xFF, 0xFF,
-                0xAC, 0x60, 0x4F, 0xC7, 0xFF, 0xFF, 0xAB};
 
-    float temp = 0;
-    Vector<float> data;
+    float temp;
 
-    sts  = new (std::nothrow) Sts3x(Wire, Sts3x::Addr::ADDR_A, 0);
+    Sts3x device(Wire, Sts3x::AddrA, 255);
 
-    //setup init failure
+    // setup init failure
     Wire.end_transmission_return = endTransmissionReturns::TIMEOUT;
-    REQUIRE(sts->init() == SensirionBase::ErrorCodes::ERROR_FAIL);
-    
-    //setup init success
+    REQUIRE(device.init() == false);
+
+    // setup init success
     Wire.end_transmission_return = endTransmissionReturns::SUCCESS;
-    REQUIRE(sts->init() == SensirionBase::ErrorCodes::NO_ERROR);
-
-    //setup heaterOn failure
-    Wire.num_bytes_to_write = 0;
-    REQUIRE(sts->heaterOn() == SensirionBase::ErrorCodes::ERROR_FAIL);
-
-    //setup heaterOn success
     Wire.num_bytes_to_write = 2;
-    REQUIRE(sts->heaterOn() == SensirionBase::ErrorCodes::NO_ERROR);
+    REQUIRE(device.init() == true);
 
-    //setup heaterOff failure
+    // setup heaterOn failure
     Wire.num_bytes_to_write = 0;
-    REQUIRE(sts->heaterOff() == SensirionBase::ErrorCodes::ERROR_FAIL);
+    REQUIRE(device.heaterOn() == false);
 
-    //setup heaterOff success
+    // setup heaterOn success
     Wire.num_bytes_to_write = 2;
-    REQUIRE(sts->heaterOff() == SensirionBase::ErrorCodes::NO_ERROR);
+    REQUIRE(device.heaterOn() == true);
 
-    //setup clearStatus failure
+    // setup heaterOff failure
     Wire.num_bytes_to_write = 0;
-    REQUIRE(sts->clearStatus() == SensirionBase::ErrorCodes::ERROR_FAIL);
+    REQUIRE(device.heaterOff() == false);
 
-    //setup getStatus success
+    // setup heaterOff success
     Wire.num_bytes_to_write = 2;
-    REQUIRE(sts->clearStatus() == SensirionBase::ErrorCodes::NO_ERROR);
+    REQUIRE(device.heaterOff() == true);
 
-    //setup getStatus failure 1
-    uint16_t dummy_status{};
+    // setup clearStatus failure
+    Wire.num_bytes_to_write = 0;
+    REQUIRE(device.clearStatus() == false);
+
+    // setup getStatus success
+    Wire.num_bytes_to_write = 2;
+    REQUIRE(device.clearStatus() == true);
+
+    // setup startPeriodicMeasurement failure
+    Wire.num_bytes_to_write = 0;
+    REQUIRE(device.startPeriodicMeasurement(Sts3x::PeriodicMode::High4Hz) == false);
+
+    // setup startPeriodicMeasurement success
+    Wire.num_bytes_to_write = 2;
+    REQUIRE(device.startPeriodicMeasurement(Sts3x::PeriodicMode::High4Hz) == true);
+
+    // setup stopPeriodicMeasurement failure
+    Wire.num_bytes_to_write = 0;
+    REQUIRE(device.stopPeriodicMeasurement() == false);
+
+    // setup stopPeriodicMeasurement success
+    Wire.num_bytes_to_write = 2;
+    REQUIRE(device.stopPeriodicMeasurement() == true);
+
+    // setup getStatus failure 1
+    uint16_t dummy_status {};
     Wire.num_bytes_to_write = 0;
     Wire.num_bytes_to_read = 3;
     Wire.data_read = clear_stat_pass_data;
-    REQUIRE(sts->getStatus(dummy_status) == SensirionBase::ErrorCodes::ERROR_FAIL);
+    REQUIRE(device.getStatus(dummy_status) == false);
 
-    //setup getStatus failure 2
+    // setup getStatus failure 2
     Wire.num_bytes_to_write = 2;
     Wire.num_bytes_to_read = 0;
     Wire.data_read = clear_stat_pass_data;
-    REQUIRE(sts->getStatus(dummy_status) == SensirionBase::ErrorCodes::ERROR_FAIL);
+    REQUIRE(device.getStatus(dummy_status) == false);
 
-    //setup getStatus failure  3
+    // setup getStatus failure  3
     Wire.num_bytes_to_write = 2;
     Wire.num_bytes_to_read = 3;
     Wire.data_read = clear_stat_fail_data;
-    REQUIRE(sts->getStatus(dummy_status) == SensirionBase::ErrorCodes::ERROR_FAIL);
+    REQUIRE(device.getStatus(dummy_status) == false);
 
-    //setup getStatus success
+    // setup getStatus success
     Wire.num_bytes_to_write = 2;
     Wire.num_bytes_to_read = 3;
     Wire.data_read = clear_stat_pass_data;
-    REQUIRE(sts->getStatus(dummy_status) == SensirionBase::ErrorCodes::NO_ERROR);
+    REQUIRE(device.getStatus(dummy_status) == true);
 
-    //setup singleShotMeasureAndRead failure 1
+    // setup singleMeasurement failure 1
     Wire.num_bytes_to_write = 0;
     Wire.num_bytes_to_read = 3;
     Wire.data_read = singleshot_pass_data;
-    REQUIRE(sts->singleShotMeasureAndRead(temp) == SensirionBase::ErrorCodes::ERROR_FAIL);
+    REQUIRE(device.singleMeasurement(temp) == false);
 
-    //setup singleShotMeasureAndRead failure 2
+    // setup singleMeasurement failure 2
     Wire.num_bytes_to_write = 2;
     Wire.num_bytes_to_read = 2;
     Wire.data_read = singleshot_pass_data;
-    REQUIRE(sts->singleShotMeasureAndRead(temp) == SensirionBase::ErrorCodes::ERROR_FAIL);
+    REQUIRE(device.singleMeasurement(temp) == false);
 
-    //setup singleShotMeasureAndRead failure 3
+    // setup singleMeasurement failure 3
     Wire.num_bytes_to_write = 2;
     Wire.num_bytes_to_read = 3;
     Wire.data_read = singleshot_fail_data;
-    REQUIRE(sts->singleShotMeasureAndRead(temp) == SensirionBase::ErrorCodes::ERROR_FAIL);
+    REQUIRE(device.singleMeasurement(temp) == false);
 
-    //setup singleShotMeasureAndRead success
+    // setup singleMeasurement success
     Wire.num_bytes_to_write = 2;
     Wire.num_bytes_to_read = 3;
     Wire.data_read = singleshot_pass_data;
-    REQUIRE(sts->singleShotMeasureAndRead(temp) == SensirionBase::ErrorCodes::NO_ERROR);
+    REQUIRE(device.singleMeasurement(temp) == true);
+    REQUIRE(std::fabs(temp - 21.149f) < 3e-3f);
 
-    //setup the periodicDataRead failure 1
-    sts->measure(Sts3x::Mode::PERIODIC_DATA, 
-                Sts3x::SingleMode::SINGLE_NONE, 
-                Sts3x::PeriodicMode::HIGH_4_MPS);
+    // setup periodicDataRead failure 1
     Wire.num_bytes_to_write = 0;
-    Wire.num_bytes_to_read = 24;
-    Wire.data_read = periodic_pass_data;
-    REQUIRE(sts->periodicDataRead(data) == SensirionBase::ErrorCodes::ERROR_FAIL);
+    Wire.num_bytes_to_read = 3;
+    Wire.data_read = singleshot_pass_data;
+    REQUIRE(device.periodicDataRead(temp) == false);
 
-    //setup the periodicDataRead failure 2
-    sts->measure(Sts3x::Mode::PERIODIC_DATA, 
-                Sts3x::SingleMode::SINGLE_NONE, 
-                Sts3x::PeriodicMode::HIGH_4_MPS);
+    // setup periodicDataRead failure 2
     Wire.num_bytes_to_write = 2;
-    Wire.num_bytes_to_read = 23;
-    Wire.data_read = periodic_pass_data;
-    REQUIRE(sts->periodicDataRead(data) == SensirionBase::ErrorCodes::ERROR_FAIL);
+    Wire.num_bytes_to_read = 2;
+    Wire.data_read = singleshot_pass_data;
+    REQUIRE(device.periodicDataRead(temp) == false);
 
-    //setup the periodicDataRead failure 3
-    sts->measure(Sts3x::Mode::PERIODIC_DATA, 
-                Sts3x::SingleMode::SINGLE_NONE, 
-                Sts3x::PeriodicMode::HIGH_4_MPS);
+    // setup periodicDataRead failure 3
     Wire.num_bytes_to_write = 2;
-    Wire.num_bytes_to_read = 24;
-    Wire.data_read = periodic_fail_data;
-    REQUIRE(sts->periodicDataRead(data) == SensirionBase::ErrorCodes::ERROR_FAIL);
+    Wire.num_bytes_to_read = 3;
+    Wire.data_read = singleshot_fail_data;
+    REQUIRE(device.periodicDataRead(temp) == false);
 
-
-    //setup the periodicDataRead success
-    sts->measure(Sts3x::Mode::PERIODIC_DATA, 
-                Sts3x::SingleMode::SINGLE_NONE, 
-                Sts3x::PeriodicMode::HIGH_4_MPS);
+    // setup periodicDataRead success
     Wire.num_bytes_to_write = 2;
-    Wire.num_bytes_to_read = 24;
-    Wire.data_read = periodic_pass_data;
-    REQUIRE(sts->periodicDataRead(data) == SensirionBase::ErrorCodes::NO_ERROR);
+    Wire.num_bytes_to_read = 3;
+    Wire.data_read = singleshot_pass_data;
+    REQUIRE(device.periodicDataRead(temp) == true);
+    REQUIRE(std::fabs(temp - 21.149f) < 3e-3f);
 }

@@ -1,5 +1,18 @@
-
-/*
+/**
+ * Copyright (c) 2022 Particle Industries, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
  * Copyright (c) 2018, Sensirion AG
  * All rights reserved.
  *
@@ -31,241 +44,182 @@
  */
 #pragma once
 
+#include <cstdint>
+
 #include "SensirionBase.h"
 
 class Sts3x : public SensirionBase {
 public:
+    static constexpr std::uint8_t AddrA {0x4au};
+    static constexpr std::uint8_t AddrB {0x4bu};
 
-    enum Addr {
-        ADDR_A = 0x4A,
-        ADDR_B = 0x4B
+    enum class SingleMode : std::uint16_t {
+        HighClockStretch = 0x2C06u,
+        MediumClockStretch = 0x2C0Du,
+        LowClockStretch = 0x2C10u,
+        HighNoClockStretch = 0x2400u,
+        MediumNoClockStretch = 0x240Bu,
+        LowNoClockStretch = 0x2416u,
     };
 
-    enum class Mode {
-        SINGLE_SHOT,
-        PERIODIC_DATA,
+    enum class PeriodicMode : std::uint16_t {
+        High500mHz = 0x2032u,
+        Medium500mHz = 0x2024u,
+        Low500mHz = 0x202Fu,
+        High1Hz = 0x2130u,
+        Medium1Hz = 0x2126u,
+        Low1Hz = 0x212Du,
+        High2Hz = 0x2236u,
+        Medium2Hz = 0x2220u,
+        Low2Hz = 0x222Bu,
+        High4Hz = 0x2334u,
+        Medium4Hz = 0x2322u,
+        Low4Hz = 0x2329u,
+        High10Hz = 0x2737u,
+        Medium10Hz = 0x2721u,
+        Low10Hz = 0x272Au,
     };
 
-    enum AlertReadCmd: uint16_t {
-        READ_HIALRT_LIM_SET = 0xE11F,
-        READ_HIALRT_LIM_CLR = 0xE114,
-        READ_LOALRT_LIM_CLR = 0xE109,
-        READ_LOALRT_LIM_SET = 0xE102,
+    enum class AlertThreshold {
+        HighSet,
+        HighClear,
+        LowSet,
+        LowClear,
     };
 
-    enum AlertWriteCmd: uint16_t {
-        WRITE_HIALRT_LIM_SET = 0x611D,
-        WRITE_HIALRT_LIM_CLR = 0x6116,
-        WRITE_LOALRT_LIM_CLR = 0x610B,
-        WRITE_LOALRT_LIM_SET = 0x6100,
-    };
-
-    enum SingleMode : uint16_t {
-        HIGH_CLOCK_STRETCH = 0x2C06,
-        MEDIUM_CLOCK_STRETCH = 0x2C0D,
-        LOW_CLOCK_STRETCH = 0x2C10,
-        HIGH_NO_CLOCK_STRETCH = 0x2400,
-        MEDIUM_NO_CLOCK_STRETCH = 0x240B,
-        LOW_NO_CLOCK_STRETCH = 0x2416,
-        SINGLE_NONE = 0xFFFF,
-    };
-    
-    enum PeriodicMode : uint16_t {
-        HIGH_05_MPS = 0x2032,
-        MEDIUM_05_MPS = 0x2024,
-        LOW_05_MPS = 0x202F,
-        HIGH_1_MPS = 0x2130,
-        MEDIUM_1_MPS = 0x2126,
-        LOW_1_MPS = 0x212D,
-        HIGH_2_MPS = 0x2236,
-        MEDIUM_2_MPS = 0x2220,
-        LOW_2_MPS = 0x222B,
-        HIGH_4_MPS = 0x2334,
-        MEDIUM_4_MPS = 0x2322,
-        LOW_4_MPS = 0x2329,
-        HIGH_10_MPS = 0x2737,
-        MEDIUM_10_MPS = 0x2721,
-        LOW_10_MPS = 0x272A,
-        PERIODIC_NONE = 0xFFFF,
-    };
-
-    enum class AlertThd {
-        STS3X_HIALRT_SET,
-        STS3X_HIALRT_CLR,
-        STS3X_LOALRT_CLR,
-        STS3X_LOALRT_SET,
-    };
-
-    Sts3x(TwoWire& interface, Addr address, pin_t alertPin) : 
-            SensirionBase(interface), 
-            _address(address),
-            _alertPin(alertPin), 
-            _sts3x_cmd_measure(SingleMode::SINGLE_NONE) {
-        pinMode(_alertPin, INPUT);
-    }
+    Sts3x(TwoWire &interface, std::uint8_t address, pin_t alert_pin)
+      : SensirionBase(interface, address),
+        _alertPin(alert_pin),
+        _mutex(address == AddrA ? mutexA : mutexB)
+    {}
 
     /**
-     * @brief Initialize the STS3x interface
+     * @brief Initialize the interface
      *
-     * @details Attempts to begin i2c transmission of the STS3x sensor to 
+     * @details Attempts to begin I2C transmission of the sensor to
      * validate the sensor can communicate
-     * 
-     * @return NO_ERROR on success, ERROR_FAIL on failure
+     *
+     * @return true on success, false on failure
      */
-    SensirionBase::ErrorCodes init();
+    bool init();
 
     /**
      * @brief Measure and read from an STS sensor the temperature and humidity
      *
      * @details Write to an STS sensor the command to start a measurement, and
-     * read from the STS sensor the temperature and humidity. Calls the 
+     * read from the STS sensor the temperature and humidity. Calls the
      * measure() and read() functions internally
      *
      * @param[out] temperature measured and read in Celsius
      *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
+     * @return true on success, false on failure
      */
-    SensirionBase::ErrorCodes singleShotMeasureAndRead(float& temperature,
-                    SingleMode s_setting = SingleMode::HIGH_NO_CLOCK_STRETCH);
-    /**
-     * @brief Measure from an STS sensor
-     *
-     * @details Write to an STS sensor the command to start a measurement.
-     * Either sends the single shot mode, or periodic mode depending on the 
-     * mode chosen. Default is single shot.
-     * 
-     * @param[in] mode measurement mode to chose from
-     * @param[in] s_setting single mode setting
-     * @param[in] p_setting periodic mode setting
-     *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
-     */
-    SensirionBase::ErrorCodes measure(Mode mode = Mode::SINGLE_SHOT, 
-                    SingleMode s_setting = SingleMode::HIGH_NO_CLOCK_STRETCH,
-                    PeriodicMode p_setting = PeriodicMode::PERIODIC_NONE);
+    bool singleMeasurement(float &temperature, SingleMode s_setting = SingleMode::HighNoClockStretch);
 
     /**
-     * @brief Read a started measurement from an STS sensor
+     * @brief Start periodic measurement
      *
-     * @details Read from an STS sensor a measurement that has already started
+     * @details Start periodic temperature and humidity measurements at the
+     * commanded repeatability and rate
      *
-     * @param[out] temperature measured and read in Celsius
+     * @param[in] mode periodic mode to use
      *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
+     * @return true on success, false on failure
      */
-    SensirionBase::ErrorCodes singleShotRead(float& temperature);
+    bool startPeriodicMeasurement(PeriodicMode);
 
     /**
-     * @brief Read a started periodic mode measurement from an STS sensor. 
+     * @brief Stop periodic measurement
+     *
+     * @details Stop any periodic temperature and humidity measurement in
+     * progress
+     *
+     * @return true on success, false on failure
+     */
+    bool stopPeriodicMeasurement();
+
+    /**
+     * @brief Read a started periodic mode measurement from an STS sensor.
      *
      * @details Read from an STS sensor periodic mode measurement(s) that has
      * already started. Each measurement contains a temperature value.
-     * The number of measurements read back depends on the MPS for the peridoc 
+     * The number of measurements read back depends on the MPS for the peridoc
      * mode setting chosen when the measure() function was called
      *
-     * @param[out] data contains the data read.
+     * @param[out] temperature contains the data read.
      *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
+     * @return true on success, false on failure
      */
-    SensirionBase::ErrorCodes periodicDataRead(Vector<float>& data);
-
-    // /**
-    //  * @brief <enter a brief one sentence description>
-    //  *
-    //  * @details <details of the function>
-    //  *
-    //  * @param[in,out] <name of variable> <description of variable>
-    //  *
-    //  * @return <what does the function return (optional if void)>
-    //  */
-    // SensirionBase::ErrorCodes setAlertThd(AlertThd thd);
-
-    // /**
-    //  * @brief <enter a brief one sentence description>
-    //  *
-    //  * @details <details of the function>
-    //  *
-    //  * @param[in,out] <name of variable> <description of variable>
-    //  *
-    //  * @return <what does the function return (optional if void)>
-    //  */
-    // SensirionBase::ErrorCodes getAlertThd(AlertThd thd);
+    bool periodicDataRead(float &temperature);
 
     /**
-     * @brief Read the STS status register
+     * @brief Set thresholds for alert mode
      *
-     * @details Sends a command to read the STS status register
+     * @details Set limits for the alert mode. An alert can be disabled
+     * by setting the low set point above the high set point.
+     *
+     * @param[in] limit the limit to set
+     * @param[in] temperature temperature threshold value
+     *
+     * @return true on success, false on failure
+     */
+    bool setAlertThreshold(AlertThreshold limit, float temperature);
+
+    /**
+     * @brief Get tresholds for alert mode
+     *
+     * @details Read limits for the alert mode
+     *
+     * @param[in] limit the limit to read
+     * @param[out] temperature temperature threshold value
+     *
+     * @return true on success, false on failure
+     */
+    bool getAlertThreshold(AlertThreshold limit, float &temperature);
+
+    /**
+     * @brief Read the status register
+     *
+     * @details Sends a command to read the SHT status register
      *
      * @param[out] status read from the register
      *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
+     * @return true on success, false on failure
      */
-    SensirionBase::ErrorCodes getStatus(uint16_t& status);
+    bool getStatus(std::uint16_t &status);
 
     /**
-     * @brief CLEAR the STS status register
+     * @brief Clear the status register
      *
-     * @details Sends a command to clear the STS status register
+     * @details Sends a command to clear the SHT status register
      *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
+     * @return true on success, false on failure
      */
-    SensirionBase::ErrorCodes clearStatus();
+    bool clearStatus();
 
     /**
-     * @brief Turns the heater on the STS to see plausability of values
+     * @brief Turns the heater on to see plausability of values
      *
      * @details Sends the heater on command
      *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
+     * @return true on success, false on failure
      */
-    SensirionBase::ErrorCodes heaterOn();
+    bool heaterOn();
 
     /**
-     * @brief Turns the heater on the STS off
+     * @brief Turns the heater off
      *
      * @details Sends the heater off command
      *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
+     * @return true on success, false on failure
      */
-    SensirionBase::ErrorCodes heaterOff();
+    bool heaterOff();
 
 private:
+    pin_t _alertPin;
+    RecursiveMutex &_mutex;
 
-    /**
-     * @brief Returns the MPS word size expected in a single second for 
-     * reading all of the measuremnts in periodic mode
-     *
-     * @details Calculates the total number of words needed to read all of
-     * the measurements in a single second while in periodic mode. So if you
-     * setup the SHT to read 10MPS in periodic mode that is 20 words, 4MPS is 
-     * 8 words, 2MPS 4 words, etc.
-     *
-     * @return number of words in a single second read
-     */
-    int _get_mps_size_to_words();
-
-    /**
-     * @brief Convert the raw temperature from an STS sensor
-     *
-     * @details This is explained in the STS data sheet, and is usually
-     * optimized for fixed point arithmetic
-     *
-     * @param[in] temperature_raw raw temp reading from STS sensor
-     *
-     * @return the read and converted temperature in Celsius
-     */
-    float _convert_raw_temp(uint16_t temperature_raw);
-
-    /**
-     * @brief converts temperature to ADC ticks
-     *
-     * @param temperature temperature value in T°C*1000
-     * @param tick sensor ADC ticks
-     */
-    uint16_t _temperature_to_tick(int32_t temperature);
-
-    RecursiveMutex mutex;
-    Addr _address;
-    uint16_t _alertPin;
-    uint16_t _sts3x_cmd_measure;
+    // Use separate mutexes per address
+    static RecursiveMutex mutexA;
+    static RecursiveMutex mutexB;
 };

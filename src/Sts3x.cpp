@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2022 Particle Industries, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,267 +14,193 @@
  * limitations under the License.
  */
 
+#include <cstdint>
+#include <mutex>
+
 #include "Sts3x.h"
 
-constexpr uint16_t STS3x_PERIODIC_READ_CMD = 0xE000;
-constexpr uint16_t STS3X_BREAK_CMD = 0x3093;
-constexpr uint16_t STS3X_CMD_READ_STATUS_REG = 0xF32D;
-constexpr uint16_t STS3X_CMD_CLR_STATUS_REG = 0x3041;
-constexpr uint16_t STS3X_CMD_HEATER_ON = 0x306D;
-constexpr uint16_t STS3X_CMD_HEATER_OFF = 0x3066;
+// Command words
+constexpr std::uint16_t SHT3xReadAlertHighSet {0xE11F};
+constexpr std::uint16_t SHT3xReadAlertHighClear {0xE114};
+constexpr std::uint16_t SHT3xReadAlertLowSet {0xE109};
+constexpr std::uint16_t SHT3xReadAlertLowClear {0xE102};
 
-constexpr uint16_t STS3X_CMD_DURATION_USEC = 1000;
-constexpr uint16_t STS3X_HUMIDITY_LIMIT_MSK = 0xFE00U;
-constexpr uint16_t STS3X_TEMPERATURE_LIMIT_MSK = 0x01FFU;
+constexpr std::uint16_t SHT3xWriteAlertHighSet {0x611D};
+constexpr std::uint16_t SHT3xWriteAlertHighClear {0x6116};
+constexpr std::uint16_t SHT3xWriteAlertLowSet {0x610B};
+constexpr std::uint16_t SHT3xWriteAlertLowClear {0x6100};
 
-constexpr unsigned int RAW_TEMP_ADC_COUNT = 21875;
-constexpr unsigned int RAW_HUMIDITY_ADC_COUNT = 12500;
-constexpr unsigned int DIVIDE_BY_POWER = 13;
-constexpr unsigned int RAW_TEMP_CONST = 45000;
-constexpr int DIVIDE_BY_TICK = 15;
-constexpr int TEMP_ADD_CONSTANT = 552195000;
-constexpr int TEMP_MULTIPLY_CONSTANT = 12271;
-constexpr float SENSIRION_SCALE = 1000.0F;
-constexpr uint16_t STS_DELIMITER = 0xFFFF;
+constexpr std::uint16_t STS3xPeriodicRead {0xE000};
+constexpr std::uint16_t STS3xBreak {0x3093};
+constexpr std::uint16_t STS3xReadStatus {0xF32D};
+constexpr std::uint16_t STS3xClearStatus {0x3041};
+constexpr std::uint16_t STS3xHeaterOn {0x306D};
+constexpr std::uint16_t STS3xHeaterOff {0x3066};
 
-constexpr int ONE_WORD_SIZE = 1;
-constexpr int TWO_WORD_SIZE = 2;
-constexpr int FOUR_WORD_SIZE = 4;
-constexpr int EIGHT_WORD_SIZE = 8;
-constexpr int TEN_WORD_SIZE = 10;
+RecursiveMutex Sts3x::mutexA;
+RecursiveMutex Sts3x::mutexB;
 
-SensirionBase::ErrorCodes Sts3x::init() {
-    SensirionBase::ErrorCodes ret = SensirionBase::ErrorCodes::NO_ERROR;
-    const std::lock_guard<RecursiveMutex> lg(mutex);
+static constexpr float from_raw_temperature(std::uint16_t temperature_raw)
+{
+    // integer version of -45 + 175 * S / (2^16 - 1)
+    return ((21875 * temperature_raw >> 13) - 45000) / 1000.f;
+}
 
-    _i2c.begin();
-    _i2c.beginTransmission(_address);
-    if (_i2c.endTransmission() != 0) {
-        Log.error("STS-3x address invalid or device failed");
-        ret = SensirionBase::ErrorCodes::ERROR_FAIL;
+static constexpr std::uint16_t to_raw_temperature(float temperature)
+{
+    // integer version of (T + 45) * (2^16 - 1) / 175
+    return (static_cast<int>(1000 * temperature) * 12271 + 552210080) >> 15;
+}
+
+bool Sts3x::init()
+{
+    bool ret = SensirionBase::init();
+
+    if (ret) {
+        pinMode(_alertPin, INPUT);
+        ret = writeCmd(STS3xBreak);
     }
     return ret;
 }
 
-SensirionBase::ErrorCodes Sts3x::singleShotMeasureAndRead(float& temperature,  
-                                                        SingleMode s_setting) {
-    SensirionBase::ErrorCodes ret = SensirionBase::ErrorCodes::NO_ERROR ;
-    const std::lock_guard<RecursiveMutex> lg(mutex);
+bool Sts3x::singleMeasurement(float &temperature, SingleMode mode)
+{
+    constexpr auto delay_high {16u};
+    constexpr auto delay_medium {7u};
+    constexpr auto delay_low {5u};
 
-    if (measure(Mode::SINGLE_SHOT, s_setting) == 
-                    SensirionBase::ErrorCodes::NO_ERROR) {
-        ret = singleShotRead(temperature);
-    }
-    else {
-        Log.error("STS-3x measure failed");
-        ret = SensirionBase::ErrorCodes::ERROR_FAIL;
-    }
-    return ret;
-}
+    std::uint16_t data;
 
-SensirionBase::ErrorCodes Sts3x::measure(Mode mode, 
-                                        SingleMode s_setting, 
-                                        PeriodicMode p_setting) {
-    SensirionBase::ErrorCodes ret = ErrorCodes::NO_ERROR;
-    const std::lock_guard<RecursiveMutex> lg(mutex);
+    // Acquire device mutex because of long delay between sending meaurement command and receiving data
+    const std::lock_guard<RecursiveMutex> lg(_mutex);
 
-    _sts3x_cmd_measure = 
-        (mode == Mode::SINGLE_SHOT) ? (uint16_t)s_setting : (uint16_t)p_setting;
-
-    //break command to stop a previous periodic mode measure
-    ret = writeCmd(_address, STS3X_BREAK_CMD);
-    delay(1);//must delay 1ms to allow STS3X to stop periodic data
-
-    //do a check here if it happens to fail
-    //the break command when in periodic mode
-    if(ret == ErrorCodes::NO_ERROR) {
-        ret = writeCmd(_address, _sts3x_cmd_measure);
+    bool ret = writeCmd(static_cast<std::uint16_t>(mode));
+    if (!ret) {
+        return ret;
     }
 
-    return ret;
-}
-
-SensirionBase::ErrorCodes Sts3x::singleShotRead(float& temperature) {
-    uint16_t words[1] {};
-    const std::lock_guard<RecursiveMutex> lg(mutex);
-
-    SensirionBase::ErrorCodes ret =
-        readWords(_address, words, SENSIRION_NUM_WORDS(words));
-    
-    temperature = _convert_raw_temp(words[0]);
-
-    return ret;
-}
-
-SensirionBase::ErrorCodes Sts3x::periodicDataRead(Vector<float>& data) {
-    const std::lock_guard<RecursiveMutex> lg(mutex);
-    int num_of_words = _get_mps_size_to_words();
-    Vector<uint16_t> words(num_of_words);
-    SensirionBase::ErrorCodes ret = ErrorCodes::ERROR_FAIL;
-
-    if(writeCmd(_address, STS3x_PERIODIC_READ_CMD) == ErrorCodes::NO_ERROR) {
-        ret = readWords(_address, words.data(), num_of_words);
-    }
-    
-    for(int i = 0; i < num_of_words; i++) {
-        if(words.at(i) != STS_DELIMITER) {
-            data.append(_convert_raw_temp(words.at(i)));
-        }
-    }
-
-    return ret;
-}
-
-int Sts3x::_get_mps_size_to_words() {
-    int size {};
-
-    switch(_sts3x_cmd_measure) {
-        case HIGH_05_MPS:
-        case MEDIUM_05_MPS:
-        case LOW_05_MPS:
-            size = ONE_WORD_SIZE;
-        break;
-
-        case HIGH_1_MPS:
-        case MEDIUM_1_MPS:
-        case LOW_1_MPS:
-            size = TWO_WORD_SIZE;
-        break;
-        case HIGH_2_MPS:
-        case MEDIUM_2_MPS:
-        case LOW_2_MPS:
-            size = FOUR_WORD_SIZE;
-        break;
-        case HIGH_4_MPS:
-        case MEDIUM_4_MPS:
-        case LOW_4_MPS:
-            size = EIGHT_WORD_SIZE;
-        break;
-        case HIGH_10_MPS:
-        case MEDIUM_10_MPS:
-        case LOW_10_MPS:
-            size = TEN_WORD_SIZE;
-        break;
-
+    switch (mode) {
+        case SingleMode::HighNoClockStretch:
+            delay(delay_high);
+            break;
+        case SingleMode::MediumNoClockStretch:
+            delay(delay_medium);
+            break;
+        case SingleMode::LowNoClockStretch:
+            delay(delay_low);
+            break;
         default:
-            size = 0;
-        break;
+            break;
     }
 
-    return size;
+    ret = readWords(&data, 1);
+    if (ret) {
+        temperature = from_raw_temperature(data);
+    }
+
+    return ret;
 }
 
-// SensirionBase::ErrorCodes Sts3x::setAlertThd(AlertThd thd, float temperature) {
-//     uint16_t limitVal = 0U;
-//     uint16_t write_cmd {};
-//     ErrorCodes ret = ErrorCodes::NO_ERROR;
-
-//     uint16_t rawT = _temperature_to_tick(temperature * SENSIRION_SCALE);
-//     uint16_t rawRH = _humidity_to_tick(humidity * SENSIRION_SCALE);
-
-//     /* convert inputs to alert threshold word */
-//     limitVal = (rawRH & SHT3X_HUMIDITY_LIMIT_MSK);
-//     limitVal |= ((rawT >> 7) & SHT3X_TEMPERATURE_LIMIT_MSK);
-
-//     switch (thd) {
-//         case AlertThd::STS3X_HIALRT_SET:
-//             write_cmd = WRITE_HIALRT_LIM_SET;
-//         break;
-
-//         case AlertThd::STS3X_HIALRT_CLR:
-//             write_cmd = WRITE_HIALRT_LIM_CLR;
-//         break;
-
-//         case AlertThd::STS3X_LOALRT_CLR:
-//             write_cmd = WRITE_LOALRT_LIM_CLR;
-//         break;
-
-//         case AlertThd::STS3X_LOALRT_SET:
-//             write_cmd = WRITE_LOALRT_LIM_SET;
-//         break;
-//     }
-
-//     if(writeCmdWithArgs(_address, write_cmd, &limitVal, 1) == 
-//                 ErrorCodes::ERROR_FAIL) {
-//         ret = ErrorCodes::ERROR_FAIL;
-//         Log.info("failed to set alert limit");
-//     }
-
-//     return ret;
-// }
-
-// SensirionBase::ErrorCodes Sts3x::getAlertThd(AlertThd thd,
-//                                             float& humidity, 
-//                                             float& temperature) {
-//     uint16_t word;
-//     uint16_t read_cmd {};
-
-//     ErrorCodes ret = ErrorCodes::NO_ERROR;
-
-//     switch (thd) {
-//         case AlertThd::STS3X_HIALRT_SET:
-//             read_cmd = READ_HIALRT_LIM_SET;
-//         break;
-
-//         case AlertThd::STS3X_HIALRT_CLR:
-//             read_cmd = READ_HIALRT_LIM_CLR;
-//         break;
-
-//         case AlertThd::STS3X_LOALRT_CLR:
-//             read_cmd = READ_LOALRT_LIM_CLR;
-//         break;
-
-//         case AlertThd::STS3X_LOALRT_SET:
-//             read_cmd = READ_LOALRT_LIM_SET;
-//         break;
-//     }
-
-//     if(writeCmdWithArgs(_address, read_cmd, &word, 1) != ErrorCodes::ERROR_FAIL) {
-//         /* convert threshold word to alert settings in 10*%RH & 10*°C */
-//         uint16_t rawRH = (word & STS3X_HUMIDITY_LIMIT_MSK);
-//         uint16_t rawT = ((word & STS3X_TEMPERATURE_LIMIT_MSK) << 7);
-
-//         humidity = _convert_raw_humidity(rawRH);
-//         temperature = _convert_raw_temp(rawT);
-//     }
-//     else {
-//         ret = ErrorCodes::ERROR_FAIL;
-//         Log.info("failed to get alert limit");
-//     }
-
-//     return ret;
-// }
-
-SensirionBase::ErrorCodes Sts3x::getStatus(uint16_t& status) {
-    const std::lock_guard<RecursiveMutex> lg(mutex);
-    return readCmd(_address, 
-                STS3X_CMD_READ_STATUS_REG, 
-                &status, 
-                1, 
-                STS3X_CMD_DURATION_USEC);
+bool Sts3x::startPeriodicMeasurement(PeriodicMode mode)
+{
+    return writeCmd(static_cast<std::uint16_t>(mode));
 }
 
-SensirionBase::ErrorCodes Sts3x::clearStatus() {
-    const std::lock_guard<RecursiveMutex> lg(mutex);
-    return writeCmd(_address, STS3X_CMD_CLR_STATUS_REG);
+bool Sts3x::stopPeriodicMeasurement()
+{
+    return writeCmd(STS3xBreak);
 }
 
-SensirionBase::ErrorCodes Sts3x::heaterOn() {
-    const std::lock_guard<RecursiveMutex> lg(mutex);
-    return writeCmd(_address, STS3X_CMD_HEATER_ON);
+bool Sts3x::periodicDataRead(float &temperature)
+{
+    uint16_t raw_temp;
+    bool ret = readCmd(STS3xPeriodicRead, &raw_temp, 1);
+
+    if (ret) {
+        temperature = from_raw_temperature(raw_temp);
+    }
+
+    return ret;
 }
 
-SensirionBase::ErrorCodes Sts3x::heaterOff() {
-    const std::lock_guard<RecursiveMutex> lg(mutex);
-    return writeCmd(_address, STS3X_CMD_HEATER_OFF);
+bool Sts3x::setAlertThreshold(AlertThreshold limit, float temperature)
+{
+    std::uint16_t write_cmd;
+
+    // convert inputs to alert threshold word
+    std::uint16_t rawT = to_raw_temperature(temperature);
+    std::uint16_t limit_val {static_cast<std::uint16_t>((rawT >> 7) & 0x1ffu)};
+
+    switch (limit) {
+        case AlertThreshold::HighSet:
+            write_cmd = SHT3xWriteAlertHighSet;
+            break;
+        case AlertThreshold::HighClear:
+            write_cmd = SHT3xWriteAlertHighClear;
+            break;
+        case AlertThreshold::LowSet:
+            write_cmd = SHT3xWriteAlertLowSet;
+            break;
+        case AlertThreshold::LowClear:
+            write_cmd = SHT3xWriteAlertLowClear;
+            break;
+    }
+
+    if (!writeCmdWithArgs(write_cmd, &limit_val, 1)) {
+        Log.info("failed to set alert limit");
+        return false;
+    }
+
+    return true;
 }
 
-float Sts3x::_convert_raw_temp(uint16_t temperature_raw) {
-    return (((RAW_TEMP_ADC_COUNT * (int32_t)temperature_raw) >> 
-                DIVIDE_BY_POWER) - RAW_TEMP_CONST)/SENSIRION_SCALE;
+bool Sts3x::getAlertThreshold(AlertThreshold limit, float &temperature)
+{
+    std::uint16_t word;
+    std::uint16_t read_cmd;
+
+    switch (limit) {
+        case AlertThreshold::HighSet:
+            read_cmd = SHT3xReadAlertHighSet;
+            break;
+        case AlertThreshold::HighClear:
+            read_cmd = SHT3xReadAlertHighClear;
+            break;
+        case AlertThreshold::LowSet:
+            read_cmd = SHT3xReadAlertLowSet;
+            break;
+        case AlertThreshold::LowClear:
+            read_cmd = SHT3xReadAlertLowClear;
+            break;
+    }
+
+    if (readCmd(read_cmd, &word, 1)) {
+        std::uint16_t rawT {static_cast<std::uint16_t>((word & 0x1ffu) << 7)};
+        temperature = from_raw_temperature(rawT);
+    } else {
+        Log.info("failed to get alert limit");
+        return false;
+    }
+
+    return true;
 }
 
-uint16_t Sts3x::_temperature_to_tick(int32_t temperature) {
-    return (uint16_t)((temperature * TEMP_MULTIPLY_CONSTANT + 
-                TEMP_ADD_CONSTANT) >> DIVIDE_BY_TICK);
+bool Sts3x::getStatus(std::uint16_t &status)
+{
+    return readCmd(STS3xReadStatus, &status, 1);
+}
+
+bool Sts3x::clearStatus()
+{
+    return writeCmd(STS3xClearStatus);
+}
+
+bool Sts3x::heaterOn()
+{
+    return writeCmd(STS3xHeaterOn);
+}
+
+bool Sts3x::heaterOff()
+{
+    return writeCmd(STS3xHeaterOff);
 }

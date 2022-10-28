@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2022 Particle Industries, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,19 +15,24 @@
  */
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
+
 #include "Particle.h"
 
-#define SENSIRION_WORD_SIZE 2
-#define SENSIRION_NUM_WORDS(x) (sizeof(x) / SENSIRION_WORD_SIZE)
-
 class SensirionBase {
-public:
-    enum class ErrorCodes {
-        NO_ERROR,
-        ERROR_FAIL,
-    };
+protected:
+    SensirionBase(TwoWire &i2c, std::uint8_t address) : _i2c(i2c), _address(address) {};
 
-    SensirionBase(TwoWire& i2c) : _i2c(i2c) {};
+    /**
+     * @brief Initialize the interface
+     *
+     * @details Attempts to begin i2c transmission of the sensor to
+     * validate the sensor can communicate
+     *
+     * @return true on success, false on failure
+     */
+    bool init();
 
     /**
      * @brief Used to read a sensirion sensor
@@ -38,16 +43,10 @@ public:
      * @param[in] command to read
      * @param[out] data_words buffer containing words read
      * @param[in] num_words number of words to read
-     * @param[in] delay_us delay seconds between sending the read command,
-     * and actually reading the results
      *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
+     * @return true on success, false on failure
      */
-    SensirionBase::ErrorCodes readCmd(uint8_t address, 
-                                    uint16_t command, 
-                                    uint16_t* data_words,
-                                    uint16_t num_words,
-                                    uint32_t delay_us = 0);
+    bool readCmd(std::uint16_t command, std::uint16_t *data_words, std::size_t num_words);
 
     /**
      * @brief Used to write a command to a sensirion sensor
@@ -57,9 +56,9 @@ public:
      * @param[in] address of sensirion device to write
      * @param[in] command to write
      *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
+     * @return true on success, false on failure
      */
-    SensirionBase::ErrorCodes writeCmd(uint8_t address, uint16_t command);
+    bool writeCmd(std::uint16_t command);
 
     /**
      * @brief Used to write a command with multiple arguments to a sensirion
@@ -75,12 +74,8 @@ public:
      *
      * @return <what does the function return (optional if void)>
      */
-    SensirionBase::ErrorCodes writeCmdWithArgs(uint8_t address, 
-                                            uint16_t command,
-                                            const uint16_t* data_words,
-                                            uint16_t num_words);
+    bool writeCmdWithArgs(std::uint16_t command, const std::uint16_t *data_words, std::size_t num_words);
 
-protected:
     /**
      * @brief Read a register from a sensirion device
      *
@@ -90,11 +85,11 @@ protected:
      *
      * @param[in] address of sensirion device to read
      * @param[out] buf buffer to store read bytes into
-     * @param[in] length number of bytes to read 
+     * @param[in] length number of bytes to read
      *
      * @return number of bytes read
      */
-    size_t readRegister(uint8_t address, uint8_t* buf, size_t length);
+    std::size_t readRegister(std::uint8_t *buf, std::size_t length);
 
     /**
      * @brief Write a register of a sensirion device
@@ -105,75 +100,33 @@ protected:
      * @param[in] address of sensirion device to write
      * @param[in] buf buffer containing payload to write
      * @param[in] length number of bytes to write
-     * 
+     * @param[in] stop true to send a stop message on the I2C bus after transmission
+     *
      * @return number of bytes written
      */
-    size_t writeRegister(uint8_t address, const uint8_t* buf, size_t length);
-
-    /**
-     * @brief Resets all devices on the i2c bus
-     *
-     * @details Will reset all of the devices on the i2c bus. This means
-     * all devices, not just sensirion devices
-     *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
-     */
-    SensirionBase::ErrorCodes generalCallReset();
+    std::size_t writeRegister(const std::uint8_t *buf, std::size_t length, bool stop = true);
 
     /**
      * @brief Read words from a sensirion device
      *
      * @details Used to read a single word, or multiple words from a sensirion
-     * device. Will read out single bytes (calls readWordsAsBytes() function) 
-     * from the sensirion device, and then concatenate those bytes to get a 
+     * device. Will read out single bytes (calls readWordsAsBytes() function)
+     * from the sensirion device, and then concatenate those bytes to get a
      * full word from a device.
      *
      * @param[in] address of sensirion device to read
      * @param[out] buffer to store read words
      * @param[in] num_words number of words to read
      *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
+     * @return true on success, false on failure
      */
-    SensirionBase::ErrorCodes readWords(uint8_t address, 
-                                    uint16_t* data_words,
-                                    uint16_t num_words);
+    bool readWords(std::uint16_t *data_words, std::size_t num_words);
 
-    TwoWire& _i2c;
+    static Logger driver_log;
+
 private:
-    /**
-     * @brief Read bytes given a buffer that represents words from a sensirion
-     * device
-     *
-     * @details This is called from the readWords() function, and will take the
-     * buffer of uint16_t elements, and read them out byte by byte from the
-     * device. This will still check if each word's crc matches the
-     * calculated crc for that word.
-     *
-     * @param[in] address of sensirion device to read
-     * @param[in] data buffer repesenting single bytes of a word to store
-     * @param[in] num_words number of words to read
-     *
-     * @return NO_ERROR on success, ERROR_FAIL on failure
-     */
-    SensirionBase::ErrorCodes readWordsAsBytes(uint8_t address, 
-                                            uint8_t* data,
-                                            uint16_t num_words);
-
-    /**
-     * @brief Fill out command to be sent to a sensirion device
-     *
-     * @details Used to fill out a command, with multiple arguments in the
-     * correct byte order. Calculates the CRC for multiple arguments.
-     *
-     * @param[out] buf buffer to store the command, args, and CRCs
-     * @param[in] cmd command to write
-     * @param[in] args buffer containing the arguments to fill, if any
-     * @param[in] num_args number of arguments to fill
-     *
-     * @return number of bytes filled in the buffer
-     */
-    uint16_t fillCmdBytes(uint8_t* buf, uint16_t cmd,
-                                     const uint16_t* args, uint8_t num_args);
+    TwoWire &_i2c;
+    std::uint8_t _address;
 
     /**
      * @brief Generates a CRC
@@ -185,20 +138,5 @@ private:
      *
      * @return the generated CRC
      */
-    uint16_t generateCrc(const uint8_t* data, uint8_t len);
-
-    /**
-     * @brief Checks to see if CRCs match
-     *
-     * @details Used to check if the given CRC matches the calculated CRC of
-     * data that is passed to it
-     *
-     * @param[in] data buffer of data to calculate CRC
-     * @param[in] len length of buffer
-     * @param[in] checksum to compare against the calculated CRC
-     * 
-     *
-     * @return TRUE if match, FALSE if no match
-     */
-    bool isChecksumMatch(const uint8_t* data, uint16_t len, uint8_t checksum);
+    static std::uint8_t generateCrc(const std::uint8_t *data, std::size_t len);
 };

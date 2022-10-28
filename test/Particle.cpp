@@ -33,7 +33,6 @@ TwoWire& __fetch_global_Wire()
 	return wire;
 }
 
-void pinMode(uint16_t pin, PinMode mode) {}
-void delay(uint32_t ms) {}
-void delayMicroseconds(uint32_t us) {}
-
+void pinMode(uint16_t, PinMode) {}
+void delay(uint32_t) {}
+void delayMicroseconds(uint32_t) {}
