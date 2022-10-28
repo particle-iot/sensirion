@@ -35,7 +35,7 @@ TEST_CASE("SHT tests")
     float temp;
     float humidity;
 
-    Sht3x device(Wire, Sht3x::ADDR_A, 255);
+    Sht3x device(Wire, Sht3x::AddrA, 255);
 
     // setup init failure
     Wire.end_transmission_return = endTransmissionReturns::TIMEOUT;
@@ -72,15 +72,11 @@ TEST_CASE("SHT tests")
 
     // setup startPeriodicMeasurement failure
     Wire.num_bytes_to_write = 0;
-    REQUIRE(
-      device.startPeriodicMeasurement(Sht3x::PeriodicMode::HIGH_4_MPS) == false
-    );
+    REQUIRE(device.startPeriodicMeasurement(Sht3x::PeriodicMode::High4Hz) == false);
 
     // setup startPeriodicMeasurement success
     Wire.num_bytes_to_write = 2;
-    REQUIRE(
-      device.startPeriodicMeasurement(Sht3x::PeriodicMode::HIGH_4_MPS) == true
-    );
+    REQUIRE(device.startPeriodicMeasurement(Sht3x::PeriodicMode::High4Hz) == true);
 
     // setup stopPeriodicMeasurement failure
     Wire.num_bytes_to_write = 0;
@@ -175,7 +171,7 @@ TEST_CASE("STS tests")
 
     float temp;
 
-    Sts3x device(Wire, Sts3x::ADDR_A, 255);
+    Sts3x device(Wire, Sts3x::AddrA, 255);
 
     // setup init failure
     Wire.end_transmission_return = endTransmissionReturns::TIMEOUT;
@@ -212,15 +208,11 @@ TEST_CASE("STS tests")
 
     // setup startPeriodicMeasurement failure
     Wire.num_bytes_to_write = 0;
-    REQUIRE(
-      device.startPeriodicMeasurement(Sts3x::PeriodicMode::HIGH_4_MPS) == false
-    );
+    REQUIRE(device.startPeriodicMeasurement(Sts3x::PeriodicMode::High4Hz) == false);
 
     // setup startPeriodicMeasurement success
     Wire.num_bytes_to_write = 2;
-    REQUIRE(
-      device.startPeriodicMeasurement(Sts3x::PeriodicMode::HIGH_4_MPS) == true
-    );
+    REQUIRE(device.startPeriodicMeasurement(Sts3x::PeriodicMode::High4Hz) == true);
 
     // setup stopPeriodicMeasurement failure
     Wire.num_bytes_to_write = 0;

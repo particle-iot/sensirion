@@ -21,67 +21,53 @@
 
 class Sht3x : public SensirionBase {
 public:
-    static constexpr std::uint8_t ADDR_A {0x44u};
-    static constexpr std::uint8_t ADDR_B {0x45u};
+    static constexpr std::uint8_t AddrA {0x44u};
+    static constexpr std::uint8_t AddrB {0x45u};
 
-    enum AlertReadCmd : std::uint16_t {
-        READ_HIALRT_LIM_SET = 0xE11F,
-        READ_HIALRT_LIM_CLR = 0xE114,
-        READ_LOALRT_LIM_CLR = 0xE109,
-        READ_LOALRT_LIM_SET = 0xE102,
+    enum class SingleMode : std::uint16_t {
+        HighClockStretch = 0x2C06u,
+        MediumClockStretch = 0x2C0Du,
+        LowClockStretch = 0x2C10u,
+        HighNoClockStretch = 0x2400u,
+        MediumNoClockStretch = 0x240Bu,
+        LowNoClockStretch = 0x2416u,
     };
 
-    enum AlertWriteCmd : std::uint16_t {
-        WRITE_HIALRT_LIM_SET = 0x611D,
-        WRITE_HIALRT_LIM_CLR = 0x6116,
-        WRITE_LOALRT_LIM_CLR = 0x610B,
-        WRITE_LOALRT_LIM_SET = 0x6100,
-    };
-
-    enum SingleMode : std::uint16_t {
-        HIGH_CLOCK_STRETCH = 0x2C06,
-        MEDIUM_CLOCK_STRETCH = 0x2C0D,
-        LOW_CLOCK_STRETCH = 0x2C10,
-        HIGH_NO_CLOCK_STRETCH = 0x2400,
-        MEDIUM_NO_CLOCK_STRETCH = 0x240B,
-        LOW_NO_CLOCK_STRETCH = 0x2416,
-    };
-
-    enum PeriodicMode : std::uint16_t {
-        HIGH_05_MPS = 0x2032,
-        MEDIUM_05_MPS = 0x2024,
-        LOW_05_MPS = 0x202F,
-        HIGH_1_MPS = 0x2130,
-        MEDIUM_1_MPS = 0x2126,
-        LOW_1_MPS = 0x212D,
-        HIGH_2_MPS = 0x2236,
-        MEDIUM_2_MPS = 0x2220,
-        LOW_2_MPS = 0x222B,
-        HIGH_4_MPS = 0x2334,
-        MEDIUM_4_MPS = 0x2322,
-        LOW_4_MPS = 0x2329,
-        HIGH_10_MPS = 0x2737,
-        MEDIUM_10_MPS = 0x2721,
-        LOW_10_MPS = 0x272A,
+    enum class PeriodicMode : std::uint16_t {
+        High500mHz = 0x2032u,
+        Medium500mHz = 0x2024u,
+        Low500mHz = 0x202Fu,
+        High1Hz = 0x2130u,
+        Medium1Hz = 0x2126u,
+        Low1Hz = 0x212Du,
+        High2Hz = 0x2236u,
+        Medium2Hz = 0x2220u,
+        Low2Hz = 0x222Bu,
+        High4Hz = 0x2334u,
+        Medium4Hz = 0x2322u,
+        Low4Hz = 0x2329u,
+        High10Hz = 0x2737u,
+        Medium10Hz = 0x2721u,
+        Low10Hz = 0x272Au,
     };
 
     enum class AlertThreshold {
-        SHT3X_HIALRT_SET,
-        SHT3X_HIALRT_CLR,
-        SHT3X_LOALRT_CLR,
-        SHT3X_LOALRT_SET,
+        HighSet,
+        HighClear,
+        LowSet,
+        LowClear,
     };
 
     Sht3x(TwoWire &interface, std::uint8_t address, pin_t alert_pin)
       : SensirionBase(interface, address),
         _alertPin(alert_pin),
-        _mutex(address == ADDR_A ? mutexA : mutexB)
+        _mutex(address == AddrA ? mutexA : mutexB)
     {}
 
     /**
      * @brief Initialize the interface
      *
-     * @details Attempts to begin i2c transmission of the sensor to
+     * @details Attempts to begin I2C transmission of the sensor to
      * validate the sensor can communicate
      *
      * @return true on success, false on failure
@@ -100,11 +86,7 @@ public:
      *
      * @return true on success, false on failure
      */
-    bool singleMeasurement(
-      float &temperature,
-      float &humidity,
-      SingleMode s_setting = SingleMode::HIGH_NO_CLOCK_STRETCH
-    );
+    bool singleMeasurement(float &temperature, float &humidity, SingleMode s_setting = SingleMode::HighNoClockStretch);
 
     /**
      * @brief Start periodic measurement
@@ -154,8 +136,7 @@ public:
      *
      * @return true on success, false on failure
      */
-    bool
-    setAlertThreshold(AlertThreshold limit, float temperature, float humidity);
+    bool setAlertThreshold(AlertThreshold limit, float temperature, float humidity);
 
     /**
      * @brief Get tresholds for alert mode
@@ -168,9 +149,7 @@ public:
      *
      * @return true on success, false on failure
      */
-    bool getAlertThreshold(
-      AlertThreshold limit, float &temperature, float &humidity
-    );
+    bool getAlertThreshold(AlertThreshold limit, float &temperature, float &humidity);
 
     /**
      * @brief Read the status register

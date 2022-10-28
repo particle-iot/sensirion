@@ -48,38 +48,30 @@
 
 #include "SensirionBase.h"
 
-constexpr unsigned int CRC8_POLYNOMIAL = 0x31;
-constexpr unsigned int CRC8_INIT = 0xFF;
-constexpr unsigned int CRC8_LEN = 1;
-constexpr unsigned int SENSIRION_COMMAND_SIZE = 2;
-constexpr unsigned int SENSIRION_MAX_BUFFER_WORDS = 32;
-constexpr unsigned int SENSIRION_WORD_SIZE {2u};
+constexpr std::size_t ReceiveBufferSize {32u};
 
 Logger SensirionBase::driver_log("sensirion-driver");
 
 bool SensirionBase::init()
 {
-    bool ret = true;
+    const std::lock_guard<TwoWire> lg(_i2c);
 
     _i2c.begin();
     _i2c.beginTransmission(_address);
     if (_i2c.endTransmission() != 0) {
         driver_log.error("address 0x%X invalid or device failed", _address);
-        ret = false;
+        return false;
     }
-    return ret;
+    return true;
 }
 
-bool SensirionBase::readCmd(
-  std::uint16_t command, std::uint16_t *data_words, std::uint16_t num_words
-)
+bool SensirionBase::readCmd(std::uint16_t command, std::uint16_t *data_words, std::size_t num_words)
 {
-    std::uint8_t buf[SENSIRION_COMMAND_SIZE] {};
+    const std::lock_guard<TwoWire> lg(_i2c); // lock the I2C bus between write and read since no stop condition is sent
+    std::uint16_t word {htons(command)};
 
-    fillCmdBytes(buf, command, NULL, 0);
-    std::size_t ret = writeRegister(buf, SENSIRION_COMMAND_SIZE);
-
-    if (ret != SENSIRION_COMMAND_SIZE) {
+    if (writeRegister(reinterpret_cast<std::uint8_t *>(&word), sizeof(word), false) != sizeof(word)) {
+        driver_log.error("failed read command: 0x%X", command);
         return false;
     }
 
@@ -88,48 +80,47 @@ bool SensirionBase::readCmd(
 
 bool SensirionBase::writeCmd(std::uint16_t command)
 {
-    std::uint8_t buf[SENSIRION_COMMAND_SIZE];
-    bool ret = true;
+    std::uint16_t word {htons(command)};
 
-    fillCmdBytes(buf, command, NULL, 0);
-    if (writeRegister(buf, SENSIRION_COMMAND_SIZE) != SENSIRION_COMMAND_SIZE) {
-        ret = false;
+    if (writeRegister(reinterpret_cast<std::uint8_t *>(&word), sizeof(word)) != sizeof(word)) {
         driver_log.error("failed write command: 0x%X", command);
+        return false;
     }
-    return ret;
+    return true;
 }
 
-bool SensirionBase::writeCmdWithArgs(
-  std::uint16_t command,
-  const std::uint16_t *data_words,
-  std::uint16_t num_words
-)
+bool SensirionBase::writeCmdWithArgs(std::uint16_t command, const std::uint16_t *data_words, std::size_t num_words)
 {
-    std::uint8_t buf[SENSIRION_MAX_BUFFER_WORDS];
-    bool ret = true;
+    std::uint8_t buf[ReceiveBufferSize];
+    std::size_t buf_size {sizeof(std::uint16_t) * (1 + num_words)};
+    auto it {reinterpret_cast<std::uint16_t *>(buf)};
 
-    std::uint16_t buf_size = fillCmdBytes(buf, command, data_words, num_words);
+    if (buf_size >= ReceiveBufferSize) {
+        return false;
+    }
+    *it = htons(command);
+    while (num_words--) {
+        *it++ = htons(*data_words);
+        data_words++;
+    }
 
     if (writeRegister(buf, buf_size) != buf_size) {
-        ret = false;
-        driver_log.error("failed write command with args");
+        driver_log.error("failed write command 0x%X with args", command);
+        return false;
     }
-    return ret;
+    return true;
 }
 
-std::uint8_t
-SensirionBase::generateCrc(const std::uint8_t *data, std::uint8_t len)
+std::uint8_t SensirionBase::generateCrc(const std::uint8_t *data, std::size_t len)
 {
-    std::uint16_t current_byte;
-    std::uint8_t crc = CRC8_INIT;
-    std::uint8_t crc_bit;
+    std::uint8_t crc = 0xffu;
 
-    /* calculates 8-Bit checksum with given polynomial */
-    for (current_byte = 0; current_byte < len; ++current_byte) {
-        crc ^= (data[current_byte]);
-        for (crc_bit = 8; crc_bit > 0; --crc_bit) {
+    for (auto i = 0u; i < len; ++i) {
+        crc ^= data[i];
+        auto j {8u};
+        while (j--) {
             if (crc & 0x80) {
-                crc = (crc << 1) ^ CRC8_POLYNOMIAL;
+                crc = (crc << 1) ^ 0x31;
             } else {
                 crc = (crc << 1);
             }
@@ -138,99 +129,50 @@ SensirionBase::generateCrc(const std::uint8_t *data, std::uint8_t len)
     return crc;
 }
 
-std::uint16_t SensirionBase::fillCmdBytes(
-  std::uint8_t *buf,
-  std::uint16_t cmd,
-  const std::uint16_t *args,
-  std::uint8_t num_args
-)
+bool SensirionBase::readWords(std::uint16_t *data_words, std::size_t num_words)
 {
-    std::uint8_t crc;
-    std::uint16_t idx = 0;
+    std::uint8_t buf[ReceiveBufferSize];
+    std::size_t buf_size {3 * num_words};
+    auto it {static_cast<std::uint8_t *>(buf)};
 
-    buf[idx++] = (std::uint8_t)((cmd & 0xFF00) >> 8);
-    buf[idx++] = (std::uint8_t)((cmd & 0x00FF) >> 0);
-
-    for (int i = 0; i < num_args; ++i) {
-        buf[idx++] = (std::uint8_t)((args[i] & 0xFF00) >> 8);
-        buf[idx++] = (std::uint8_t)((args[i] & 0x00FF) >> 0);
-
-        crc = generateCrc((std::uint8_t *)&buf[idx - 2], SENSIRION_WORD_SIZE);
-        buf[idx++] = crc;
+    if (buf_size >= ReceiveBufferSize) {
+        return false;
     }
-    return idx;
-}
 
-bool SensirionBase::readWordsAsBytes(
-  std::uint8_t *data, std::uint16_t num_words
-)
-{
-    bool ret = true; // assume success
-    int size = num_words * (SENSIRION_WORD_SIZE + CRC8_LEN);
-    std::uint16_t word_buf[SENSIRION_MAX_BUFFER_WORDS] {};
-    std::uint8_t *const buf8 = (std::uint8_t *)word_buf;
-
-    if (!readRegister(buf8, size)) {
-        ret = false;
-        driver_log.error("read register fail");
-    } else {
-        /* check the CRC for each word */
-        for (int i = 0, j = 0; i < size; i += SENSIRION_WORD_SIZE + CRC8_LEN) {
-            if (generateCrc(&buf8[i], SENSIRION_WORD_SIZE) != buf8[i + SENSIRION_WORD_SIZE]) {
-                ret = false;
-                driver_log.error("checksum match failed");
-                break;
-            } else {
-                data[j++] = buf8[i];
-                data[j++] = buf8[i + 1];
-            }
+    if (readRegister(buf, buf_size) != buf_size) {
+        driver_log.error("receive data failed");
+        return false;
+    }
+    while (num_words--) {
+        if (generateCrc(it, 2) != it[2]) {
+            driver_log.error("checksum match failed");
+            return false;
         }
+        *data_words++ = ntohs(*reinterpret_cast<std::uint16_t *>(it));
+        it += 3;
     }
-
-    return ret;
+    return true;
 }
 
-bool SensirionBase::readWords(
-  std::uint16_t *data_words, std::uint16_t num_words
-)
+std::size_t SensirionBase::writeRegister(const std::uint8_t *buf, std::size_t length, bool stop)
 {
-    const std::uint8_t *word_bytes;
+    const std::lock_guard<TwoWire> lg(_i2c);
 
-    bool ret = readWordsAsBytes((std::uint8_t *)data_words, num_words);
-
-    if (ret) {
-        for (int i = 0; i < num_words; ++i) {
-            word_bytes = (std::uint8_t *)&data_words[i];
-            data_words[i] = ((std::uint16_t)word_bytes[0] << 8) | word_bytes[1];
-        }
-    } else {
-        driver_log.error("read words failed");
-    }
-
-    return ret;
-}
-
-std::size_t
-SensirionBase::writeRegister(const std::uint8_t *buf, std::size_t length)
-{
     _i2c.beginTransmission(_address);
     std::size_t ret = _i2c.write(buf, length);
-    _i2c.endTransmission();
-
+    _i2c.endTransmission(stop);
     return ret;
 }
 
 std::size_t SensirionBase::readRegister(std::uint8_t *buf, std::size_t length)
 {
-    std::size_t readLength = _i2c.requestFrom(_address, length);
-    std::size_t count = 0;
-    if (readLength != length) {
-        _i2c.endTransmission();
-    } else {
-        while (_i2c.available() && length--) {
-            *buf++ = _i2c.read();
-            count++;
-        }
+    const std::lock_guard<TwoWire> lg(_i2c);
+    std::size_t count {};
+
+    _i2c.requestFrom(_address, length);
+    while (_i2c.available() && length--) {
+        *buf++ = _i2c.read();
+        count++;
     }
     return count;
 }

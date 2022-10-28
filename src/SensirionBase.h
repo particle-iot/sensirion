@@ -22,9 +22,7 @@
 
 class SensirionBase {
 protected:
-    SensirionBase(TwoWire &i2c, std::uint8_t address)
-      : _i2c(i2c),
-        _address(address) {};
+    SensirionBase(TwoWire &i2c, std::uint8_t address) : _i2c(i2c), _address(address) {};
 
     /**
      * @brief Initialize the interface
@@ -48,9 +46,7 @@ protected:
      *
      * @return true on success, false on failure
      */
-    bool readCmd(
-      std::uint16_t command, std::uint16_t *data_words, std::uint16_t num_words
-    );
+    bool readCmd(std::uint16_t command, std::uint16_t *data_words, std::size_t num_words);
 
     /**
      * @brief Used to write a command to a sensirion sensor
@@ -78,11 +74,7 @@ protected:
      *
      * @return <what does the function return (optional if void)>
      */
-    bool writeCmdWithArgs(
-      std::uint16_t command,
-      const std::uint16_t *data_words,
-      std::uint16_t num_words
-    );
+    bool writeCmdWithArgs(std::uint16_t command, const std::uint16_t *data_words, std::size_t num_words);
 
     /**
      * @brief Read a register from a sensirion device
@@ -108,10 +100,11 @@ protected:
      * @param[in] address of sensirion device to write
      * @param[in] buf buffer containing payload to write
      * @param[in] length number of bytes to write
+     * @param[in] stop true to send a stop message on the I2C bus after transmission
      *
      * @return number of bytes written
      */
-    std::size_t writeRegister(const std::uint8_t *buf, std::size_t length);
+    std::size_t writeRegister(const std::uint8_t *buf, std::size_t length, bool stop = true);
 
     /**
      * @brief Read words from a sensirion device
@@ -127,87 +120,13 @@ protected:
      *
      * @return true on success, false on failure
      */
-    bool readWords(std::uint16_t *data_words, std::uint16_t num_words);
+    bool readWords(std::uint16_t *data_words, std::size_t num_words);
 
-    TwoWire &_i2c;
-    std::uint8_t _address;
     static Logger driver_log;
 
-    static constexpr float convert_raw_temp(std::uint16_t temperature_raw)
-    {
-        return (((RAW_TEMP_ADC_COUNT * temperature_raw) >> DIVIDE_BY_POWER)
-                - RAW_TEMP_CONST)
-               / SENSIRION_SCALE;
-    }
-
-    static constexpr float convert_raw_humidity(std::uint16_t humidity_raw)
-    {
-        return ((RAW_HUMIDITY_ADC_COUNT * humidity_raw) >> DIVIDE_BY_POWER)
-               / SENSIRION_SCALE;
-    }
-
-    static constexpr std::uint16_t temperature_to_tick(float temperature)
-    {
-        return (static_cast<int>(SENSIRION_SCALE * temperature)
-                  * TEMP_MULTIPLY_CONSTANT
-                + TEMP_ADD_CONSTANT)
-               >> DIVIDE_BY_TICK;
-    }
-
-    static constexpr std::uint16_t humidity_to_tick(float humidity)
-    {
-        return (static_cast<int>(SENSIRION_SCALE * humidity)
-                * HUMID_MULT_CONSTANT)
-               >> DIVIDE_BY_TICK;
-    }
-
 private:
-    static constexpr int RAW_TEMP_ADC_COUNT = 21875;
-    static constexpr int RAW_HUMIDITY_ADC_COUNT = 12500;
-    static constexpr int DIVIDE_BY_POWER = 13;
-    static constexpr int DIVIDE_BY_TICK = 15;
-    static constexpr int TEMP_ADD_CONSTANT = 552195000;
-    static constexpr int TEMP_MULTIPLY_CONSTANT = 12271;
-    static constexpr int HUMID_MULT_CONSTANT = 21474;
-    static constexpr int RAW_TEMP_CONST = 45000;
-    static constexpr float SENSIRION_SCALE = 1000.0F;
-
-    /**
-     * @brief Read bytes given a buffer that represents words from a sensirion
-     * device
-     *
-     * @details This is called from the readWords() function, and will take the
-     * buffer of std::uint16_t elements, and read them out byte by byte from the
-     * device. This will still check if each word's crc matches the
-     * calculated crc for that word.
-     *
-     * @param[in] address of sensirion device to read
-     * @param[in] data buffer repesenting single bytes of a word to store
-     * @param[in] num_words number of words to read
-     *
-     * @return true on success, false on failure
-     */
-    bool readWordsAsBytes(std::uint8_t *data, std::uint16_t num_words);
-
-    /**
-     * @brief Fill out command to be sent to a sensirion device
-     *
-     * @details Used to fill out a command, with multiple arguments in the
-     * correct byte order. Calculates the CRC for multiple arguments.
-     *
-     * @param[out] buf buffer to store the command, args, and CRCs
-     * @param[in] cmd command to write
-     * @param[in] args buffer containing the arguments to fill, if any
-     * @param[in] num_args number of arguments to fill
-     *
-     * @return number of bytes filled in the buffer
-     */
-    std::uint16_t fillCmdBytes(
-      std::uint8_t *buf,
-      std::uint16_t cmd,
-      const std::uint16_t *args,
-      std::uint8_t num_args
-    );
+    TwoWire &_i2c;
+    std::uint8_t _address;
 
     /**
      * @brief Generates a CRC
@@ -219,5 +138,5 @@ private:
      *
      * @return the generated CRC
      */
-    std::uint8_t generateCrc(const std::uint8_t *data, std::uint8_t len);
+    static std::uint8_t generateCrc(const std::uint8_t *data, std::size_t len);
 };
