@@ -15,7 +15,6 @@
  */
 
 #include <cstdint>
-#include <mutex>
 
 #include "Sts3x.h"
 
@@ -125,7 +124,7 @@ bool Sts3x::periodicDataRead(float &temperature)
 
 bool Sts3x::setAlertThreshold(AlertThreshold limit, float temperature)
 {
-    std::uint16_t write_cmd;
+    std::uint16_t write_cmd {};
 
     // convert inputs to alert threshold word
     std::uint16_t rawT = to_raw_temperature(temperature);
@@ -156,8 +155,8 @@ bool Sts3x::setAlertThreshold(AlertThreshold limit, float temperature)
 
 bool Sts3x::getAlertThreshold(AlertThreshold limit, float &temperature)
 {
-    std::uint16_t word;
-    std::uint16_t read_cmd;
+    std::uint16_t word {};
+    std::uint16_t read_cmd {};
 
     switch (limit) {
         case AlertThreshold::HighSet:

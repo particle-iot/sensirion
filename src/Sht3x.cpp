@@ -44,7 +44,6 @@
  */
 
 #include <cstdint>
-#include <mutex>
 
 #include "Sht3x.h"
 
@@ -200,8 +199,8 @@ bool Sht3x::setAlertThreshold(AlertThreshold limit, float temperature, float hum
 
 bool Sht3x::getAlertThreshold(AlertThreshold limit, float &temperature, float &humidity)
 {
-    std::uint16_t word;
-    std::uint16_t read_cmd;
+    std::uint16_t word {};
+    std::uint16_t read_cmd {};
 
     switch (limit) {
         case AlertThreshold::HighSet:

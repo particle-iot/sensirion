@@ -44,7 +44,6 @@
  */
 
 #include <cstdint>
-#include <mutex>
 
 #include "SensirionBase.h"
 
@@ -68,7 +67,7 @@ bool SensirionBase::init()
 bool SensirionBase::readCmd(std::uint16_t command, std::uint16_t *data_words, std::size_t num_words)
 {
     const std::lock_guard<TwoWire> lg(_i2c); // lock the I2C bus between write and read since no stop condition is sent
-    std::uint16_t word {htons(command)};
+    std::uint16_t word {inet_htons(command)};
 
     if (writeRegister(reinterpret_cast<std::uint8_t *>(&word), sizeof(word), false) != sizeof(word)) {
         driver_log.error("failed read command: 0x%X", command);
@@ -80,7 +79,7 @@ bool SensirionBase::readCmd(std::uint16_t command, std::uint16_t *data_words, st
 
 bool SensirionBase::writeCmd(std::uint16_t command)
 {
-    std::uint16_t word {htons(command)};
+    std::uint16_t word {inet_htons(command)};
 
     if (writeRegister(reinterpret_cast<std::uint8_t *>(&word), sizeof(word)) != sizeof(word)) {
         driver_log.error("failed write command: 0x%X", command);
@@ -98,9 +97,9 @@ bool SensirionBase::writeCmdWithArgs(std::uint16_t command, const std::uint16_t 
     if (buf_size >= ReceiveBufferSize) {
         return false;
     }
-    *it = htons(command);
+    *it = inet_htons(command);
     while (num_words--) {
-        *it++ = htons(*data_words);
+        *it++ = inet_htons(*data_words);
         data_words++;
     }
 
@@ -148,7 +147,7 @@ bool SensirionBase::readWords(std::uint16_t *data_words, std::size_t num_words)
             driver_log.error("checksum match failed");
             return false;
         }
-        *data_words++ = ntohs(*reinterpret_cast<std::uint16_t *>(it));
+        *data_words++ = inet_ntohs(*reinterpret_cast<std::uint16_t *>(it));
         it += 3;
     }
     return true;
