@@ -1,4 +1,3 @@
-#include "Particle.h"
 #include "Sht3x.h"
 
 #define USE_SINGLE_SHOT
@@ -19,7 +18,7 @@ STARTUP(System.enableFeature(FEATURE_RESET_INFO);
 SYSTEM_THREAD(ENABLED);
 SYSTEM_MODE(SEMI_AUTOMATIC);
 
-Sht3x sht(Wire, Sht3x::ADDR_A, 255);
+Sht3x sht(Wire, Sht3x::AddrA, 255);
 
 void setup()
 {
@@ -31,7 +30,7 @@ void setup()
     }
 
 #if !defined(USE_SINGLE_SHOT)
-    sht.startPeriodicMeasurement(Sht3x::PeriodicMode::HIGH_10_MPS);
+    sht.startPeriodicMeasurement(Sht3x::PeriodicMode::High10Hz);
 #endif // !defined(USE_SINGLE_SHOT)
 }
 

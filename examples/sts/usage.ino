@@ -1,4 +1,3 @@
-#include "Particle.h"
 #include "Sts3x.h"
 
 #define USE_SINGLE_SHOT
@@ -19,7 +18,7 @@ STARTUP(System.enableFeature(FEATURE_RESET_INFO);
 SYSTEM_THREAD(ENABLED);
 SYSTEM_MODE(SEMI_AUTOMATIC);
 
-Sts3x sts(Wire, Sts3x::ADDR_A, 255);
+Sts3x sts(Wire, Sts3x::AddrA, 255);
 
 void setup()
 {
@@ -31,7 +30,7 @@ void setup()
     }
 
 #if !defined(USE_SINGLE_SHOT)
-    sts.startPeriodicMeasurement(Sts3x::PeriodicMode::HIGH_10_MPS);
+    sts.startPeriodicMeasurement(Sts3x::PeriodicMode::High10Hz);
 #endif // !defined(USE_SINGLE_SHOT)
 }
 
@@ -43,7 +42,7 @@ void loop()
         float temp;
 #if defined(USE_SINGLE_SHOT)
         if (sts.singleMeasurement(
-              temp, Sts3x::SingleMode::LOW_NO_CLOCK_STRETCH
+              temp, Sts3x::SingleMode::LowNoClockStretch
             )) {
             Log.info("temp: %f", temp);
         } else {
